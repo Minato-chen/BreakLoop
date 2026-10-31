@@ -97,19 +97,10 @@ public struct MenuBarContent: View {
     private var actionButtonTitle: String {
         switch engine.mode {
         case .working:
-            if let name = engine.nextBlock?.name, name != "休息" && name != "休息放松" && !name.isEmpty {
-                return "进入休息 · \(name)"
-            }
             return "进入休息"
         case .resting:
-            if let name = engine.nextBlock?.name, name != "工作" && name != "工作专注" && !name.isEmpty {
-                return "开始专注 · \(name)"
-            }
             return "开始专注"
         case .standby:
-            if let name = engine.currentBlock?.name, name != "工作" && name != "工作专注" && !name.isEmpty {
-                return "开始 · \(name)"
-            }
             return "开始专注"
         }
     }

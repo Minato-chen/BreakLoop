@@ -180,7 +180,7 @@ public struct PipelineFlowCanvasView: View {
                         .textFieldStyle(.plain)
                         .frame(minWidth: 70, maxWidth: 120)
                     
-                    Text(isWork ? "工作" : (isStopwatch ? "自由休息" : "休息"))
+                    Text(isWork ? "专注" : (isStopwatch ? "自由休息" : "休息"))
                         .font(.system(size: 10, weight: .medium))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
@@ -219,13 +219,13 @@ public struct PipelineFlowCanvasView: View {
                     .controlSize(.mini)
                 }
                 
-                // 操作菜单（在此上方 / 下方插入工作模块 / 休息模块）
+                // 操作菜单（在此上方 / 下方插入专注模块 / 休息模块）
                 Menu {
                     Section("向上方插入") {
                         Button(action: {
                             insertBlock(FlowBlock.makeWork(), before: index)
                         }) {
-                            Label("在此上方插入工作模块", systemImage: "laptopcomputer")
+                            Label("在此上方插入专注模块", systemImage: "laptopcomputer")
                         }
                         Button(action: {
                             insertBlock(FlowBlock.makeCountdownRest(name: "休息", minutes: 5), before: index)
@@ -238,7 +238,7 @@ public struct PipelineFlowCanvasView: View {
                         Button(action: {
                             insertBlock(FlowBlock.makeWork(), after: index)
                         }) {
-                            Label("在此下方插入工作模块", systemImage: "laptopcomputer")
+                            Label("在此下方插入专注模块", systemImage: "laptopcomputer")
                         }
                         Button(action: {
                             insertBlock(FlowBlock.makeCountdownRest(name: "休息", minutes: 5), after: index)
@@ -317,7 +317,7 @@ public struct PipelineFlowCanvasView: View {
                     .padding(.horizontal, 8)
                 
                 if isWork {
-                    // 💻 工作模块配置（固定倒计时，无歧义，专注高效）
+                    // 💻 专注模块配置（固定倒计时，无歧义，专注高效）
                     VStack(alignment: .leading, spacing: 10) {
                         // (1) 专注时长与稍后提醒
                         HStack(spacing: 12) {
@@ -547,12 +547,12 @@ public struct PipelineFlowCanvasView: View {
                     .frame(width: 1.5, height: 8)
             }
             
-            // 纯粹的插入菜单（仅工作模块 / 休息模块）
+            // 纯粹的插入菜单（仅专注模块 / 休息模块）
             Menu {
                 Button(action: {
                     insertAction(FlowBlock.makeWork())
                 }) {
-                    Label("插入工作模块", systemImage: "laptopcomputer")
+                    Label("插入专注模块", systemImage: "laptopcomputer")
                 }
                 
                 Button(action: {

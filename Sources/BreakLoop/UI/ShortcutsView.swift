@@ -82,8 +82,8 @@ public struct ShortcutsView: View {
             VStack(spacing: 12) {
                 shortcutRow(
                     keys: ["⌥ Option", "⇧ Shift", "S"],
-                    title: "开始工作 / 进入下一轮",
-                    description: "处于待机状态时立即开始首个工作块；在休息或工作进行中直接推进至下一个流程阶段"
+                    title: "开始专注 / 进入下一轮",
+                    description: "处于待机状态时立即开始首个专注块；在休息或专注进行中直接推进至下一个流程阶段"
                 )
                 
                 Divider()

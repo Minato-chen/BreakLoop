@@ -75,6 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             )
             window.title = "BreakLoop"
             window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
             window.center()
             window.delegate = self
             window.contentView = NSHostingView(rootView: MainAppView(engine: engine))

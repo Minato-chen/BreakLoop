@@ -84,20 +84,42 @@ public struct DashboardView: View {
         }
     }
     
-    // MARK: - 顶部工具栏
+    // MARK: - 顶部工具栏（方案直接切换 + 待机出口）
     private var topBar: some View {
         HStack {
-            HStack(spacing: 6) {
-                Image(systemName: "square.stack.3d.down.right.fill")
-                    .font(.caption)
-                    .foregroundColor(.accentColor)
-                Text(engine.preset.name)
-                    .font(.system(size: 13, weight: .semibold))
+            Menu {
+                ForEach(presetStore.presets) { preset in
+                    Button(action: {
+                        presetStore.activePresetId = preset.id
+                        engine.preset = preset
+                    }) {
+                        HStack {
+                            Text("\(preset.name) (\(preset.blocks.count)步)")
+                            if engine.preset.id == preset.id {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "square.stack.3d.down.right.fill")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                    Text(engine.preset.name)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color(NSColor.controlBackgroundColor))
+                .clipShape(Capsule())
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Color(NSColor.controlBackgroundColor))
-            .clipShape(Capsule())
+            .menuStyle(.borderlessButton)
+            .help("点击直接切换预设方案")
             
             Spacer()
             
@@ -119,7 +141,7 @@ public struct DashboardView: View {
         }
     }
     
-    // MARK: - 横向直观节点轨（目前到哪个阶段一眼看懂）
+    // MARK: - 横向直观节点轨（支持直接点击任意阶段秒速切换）
     private var horizontalStageTrack: some View {
         HStack(spacing: 6) {
             ForEach(Array(engine.preset.blocks.enumerated()), id: \.element.id) { index, block in
@@ -127,25 +149,31 @@ public struct DashboardView: View {
                 let isDone = (engine.mode != .standby && engine.currentBlockIndex > index)
                 let blockColor: Color = block.type == .work ? .blue : (block.timingMode == .stopwatch ? .purple : .green)
                 
-                HStack(spacing: 4) {
-                    if isDone {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(.secondary)
+                Button(action: {
+                    engine.jumpToBlock(index: index)
+                }) {
+                    HStack(spacing: 4) {
+                        if isDone {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.secondary)
+                        }
+                        Text(block.name)
+                            .font(.system(size: 11, weight: isCurrent ? .bold : .medium))
+                            .foregroundColor(isCurrent ? blockColor : (isDone ? .secondary : .secondary.opacity(0.7)))
                     }
-                    Text(block.name)
-                        .font(.system(size: 11, weight: isCurrent ? .bold : .medium))
-                        .foregroundColor(isCurrent ? blockColor : (isDone ? .secondary : .secondary.opacity(0.6)))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        isCurrent ? blockColor.opacity(0.14) : (isDone ? Color.primary.opacity(0.04) : Color.clear)
+                    )
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule().stroke(isCurrent ? blockColor : Color.primary.opacity(0.12), lineWidth: isCurrent ? 1.5 : 1)
+                    )
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    isCurrent ? blockColor.opacity(0.14) : (isDone ? Color.primary.opacity(0.04) : Color.clear)
-                )
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule().stroke(isCurrent ? blockColor : Color.primary.opacity(0.08), lineWidth: isCurrent ? 1.5 : 1)
-                )
+                .buttonStyle(.plain)
+                .help("点击直达此步骤：\(block.name)")
                 
                 if index < engine.preset.blocks.count - 1 {
                     Image(systemName: "chevron.right")
@@ -156,7 +184,7 @@ public struct DashboardView: View {
         }
     }
     
-    // MARK: - 核心操作按钮组
+    // MARK: - 核心操作按钮组（支持开始专注、直接休息与跳过）
     private var actionControlGroup: some View {
         HStack(spacing: 12) {
             Group {
@@ -190,18 +218,35 @@ public struct DashboardView: View {
                     .buttonStyle(.plain)
                     
                 case .standby:
-                    Button(action: { engine.startCurrentBlock() }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "play.fill")
-                            Text("开始专注")
+                    HStack(spacing: 12) {
+                        Button(action: { engine.startCurrentBlock() }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "play.fill")
+                                Text("开始专注")
+                            }
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 140, height: 42)
+                            .background(Color.accentColor)
+                            .clipShape(Capsule())
                         }
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 160, height: 42)
-                        .background(Color.accentColor)
-                        .clipShape(Capsule())
+                        .buttonStyle(.plain)
+                        
+                        Button(action: { engine.startRest() }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "cup.and.saucer.fill")
+                                Text("直接休息")
+                            }
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
+                            .padding(.horizontal, 14)
+                            .frame(height: 42)
+                            .background(Color(NSColor.controlBackgroundColor))
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .help("立即开启休息流程")
                     }
-                    .buttonStyle(.plain)
                 }
             }
             

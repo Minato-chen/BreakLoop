@@ -390,7 +390,7 @@ public struct StatsView: View {
                                 
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack {
-                                        Text(isWork ? "💻 工作专注" : "☕️ 休息")
+                                        Text(isWork ? "💻 专注" : "☕️ 休息")
                                             .font(.system(size: 13, weight: .semibold))
                                         Text(s.presetName)
                                             .font(.caption2)
@@ -764,7 +764,7 @@ public struct StatsView: View {
         var csv = "类型,方案,开始时间,结束时间,时长(秒),结束原因\n"
         
         for s in sessions {
-            let kindStr = (s.kind == .work) ? "工作" : "休息"
+            let kindStr = (s.kind == .work) ? "专注" : "休息"
             let startStr = Self.csvDateFormatter.string(from: s.start)
             let endStr = Self.csvDateFormatter.string(from: s.end)
             let line = "\(kindStr),\"\(s.presetName)\",\(startStr),\(endStr),\(Int(s.duration)),\(s.endReason.rawValue)\n"

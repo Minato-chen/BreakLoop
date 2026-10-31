@@ -198,7 +198,7 @@ public struct SoundManagerView: View {
                 // 4. 全局默认提示音
                 HStack(spacing: 20) {
                     HStack(spacing: 8) {
-                        Text("工作默认音:")
+                        Text("专注默认音:")
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Picker("", selection: $soundManager.defaultWorkSound) {

@@ -86,7 +86,7 @@ public struct GitHubHeatmapMatrixView: View {
                     HStack(spacing: 8) {
                         Text("\(hover.day.dateString) \(String(format: "%02d:00", hover.hour.hour))")
                             .fontWeight(.semibold)
-                        Text("💼 工作: \(hover.hour.workMinutes)m")
+                        Text("💼 专注: \(hover.hour.workMinutes)m")
                             .foregroundColor(.orange)
                         Text("🍵 休息: \(hover.hour.restMinutes)m")
                             .foregroundColor(.green)
@@ -110,7 +110,7 @@ public struct GitHubHeatmapMatrixView: View {
                         RoundedRectangle(cornerRadius: 2)
                             .fill(Color.orange.opacity(0.85))
                             .frame(width: 10, height: 10)
-                        Text("工作")
+                        Text("专注")
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }

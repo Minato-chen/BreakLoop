@@ -1,13 +1,13 @@
 import Foundation
 
-/// 模块类型：工作 或 休息
+/// 模块类型：专注 或 休息
 public enum FlowBlockType: String, Codable, CaseIterable {
     case work = "work"
     case rest = "rest"
     
     public var displayName: String {
         switch self {
-        case .work: return "工作"
+        case .work: return "专注"
         case .rest: return "休息"
         }
     }
@@ -118,8 +118,8 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
         self.snoozeMinutes = try container.decodeIfPresent(Int.self, forKey: .snoozeMinutes) ?? 5
     }
     
-    /// 快捷创建工作模块
-    public static func makeWork(name: String = "工作专注", minutes: Int = 20, message: String = "专注结束，该休息一下了", sound: String = "Glass") -> FlowBlock {
+    /// 快捷创建专注模块
+    public static func makeWork(name: String = "专注", minutes: Int = 20, message: String = "专注结束，该休息一下了", sound: String = "Glass") -> FlowBlock {
         FlowBlock(
             type: .work,
             name: name,
@@ -395,7 +395,7 @@ public struct Preset: Codable, Identifiable, Equatable {
                 id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
                 name: "健康循环",
                 blocks: [
-                    FlowBlock.makeWork(name: "工作专注", minutes: 20, message: "20 分钟到了，起身远眺休息片刻", sound: "Glass"),
+                    FlowBlock.makeWork(name: "专注", minutes: 20, message: "20 分钟到了，起身远眺休息片刻", sound: "Glass"),
                     FlowBlock.makeStopwatchRest(name: "自由休息", targetSeconds: 20, message: "看远方 20 秒（20英尺外）", sound: "Glass")
                 ],
                 restMaxMinutes: 30,
@@ -427,7 +427,7 @@ public struct Preset: Codable, Identifiable, Equatable {
                 blocks: [
                     FlowBlock.makeWork(name: "热身专注", minutes: 20, message: "热身结束，闭目 5 分钟", sound: "Pop"),
                     FlowBlock.makeCountdownRest(name: "闭目养神", minutes: 5, message: "养神完毕，准备进入深度攻坚", sound: "Pop"),
-                    FlowBlock.makeWork(name: "深度工作", minutes: 30, message: "攻坚完成，恭喜达成！自由放松", sound: "Glass"),
+                    FlowBlock.makeWork(name: "深度专注", minutes: 30, message: "攻坚完成，恭喜达成！自由放松", sound: "Glass"),
                     FlowBlock.makeStopwatchRest(name: "自由大休", targetSeconds: 300, message: "自由走动、喝水拉伸", sound: "Glass")
                 ],
                 restMaxMinutes: 45,

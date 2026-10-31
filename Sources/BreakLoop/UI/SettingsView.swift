@@ -126,7 +126,7 @@ public struct PresetManagerView: View {
         let newPreset = Preset(
             name: "新专注循环",
             blocks: [
-                FlowBlock.makeWork(name: "工作专注", minutes: 25),
+                FlowBlock.makeWork(name: "专注", minutes: 25),
                 FlowBlock.makeCountdownRest(name: "短休", minutes: 5)
             ]
         )

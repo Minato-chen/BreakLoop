@@ -18,7 +18,22 @@ public final class PresetStore: ObservableObject {
         } else {
             loadedPresets = Preset.defaultPresets
         }
-        self.presets = loadedPresets
+        var sanitizedPresets = loadedPresets
+        var didMigrate = false
+        for (pIdx, p) in sanitizedPresets.enumerated() {
+            for (bIdx, b) in p.blocks.enumerated() {
+                if b.type == .work && (b.name == "工作" || b.name == "工作专注") {
+                    sanitizedPresets[pIdx].blocks[bIdx].name = "专注"
+                    didMigrate = true
+                }
+            }
+        }
+        self.presets = sanitizedPresets
+        if didMigrate {
+            if let data = try? JSONEncoder().encode(sanitizedPresets) {
+                UserDefaults.standard.set(data, forKey: userDefaultsKey)
+            }
+        }
         
         if let savedActiveStr = UserDefaults.standard.string(forKey: activePresetIdKey),
            let savedUUID = UUID(uuidString: savedActiveStr),
