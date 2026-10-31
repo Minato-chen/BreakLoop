@@ -1,67 +1,77 @@
 import SwiftUI
 
-/// 菜单栏下拉内容（纯粹极简：二元工作/休息切换 + 待机出口）
+/// 极简直观的菜单栏下拉交互（以当前进度与核心动作为首，无冗余文字）
 public struct MenuBarContent: View {
     @ObservedObject var engine: TimerEngine
     @ObservedObject var presetStore = PresetStore.shared
     
-    var onOpenStats: () -> Void
-    var onOpenSettings: () -> Void
+    var onOpenDashboard: () -> Void
     var onQuit: () -> Void
     
     public init(
         engine: TimerEngine,
-        onOpenStats: @escaping () -> Void,
-        onOpenSettings: @escaping () -> Void,
+        onOpenDashboard: @escaping () -> Void,
         onQuit: @escaping () -> Void
     ) {
         self.engine = engine
-        self.onOpenStats = onOpenStats
-        self.onOpenSettings = onOpenSettings
+        self.onOpenDashboard = onOpenDashboard
         self.onQuit = onQuit
     }
     
     public var body: some View {
         VStack {
-            // MARK: - 核心二元状态操作
+            // 1. 顶部：极简阶段进度条
+            Text(stageSummaryText)
+                .font(.headline)
+            
+            if let next = engine.nextBlock, engine.mode != .standby {
+                Text("下一步: \(next.name) (\(next.durationMinutes)m)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            
+            Divider()
+            
+            // 2. 核心快捷动作（规范文本，杜绝“去工作 (工作)”同义重复）
             switch engine.mode {
             case .working:
-                // 工作状态下：唯一的主要动作就是“去休息”
-                Button(action: { engine.startRest() }) {
-                    Label("进入休息", systemImage: "cup.and.saucer.fill")
+                Button(action: { engine.advanceToNextBlock() }) {
+                    Label(actionButtonTitle, systemImage: "cup.and.saucer.fill")
                 }
                 
             case .resting:
-                // 休息状态下：唯一的主要动作就是“去工作”
-                Button(action: { engine.startNextWorkCycle() }) {
-                    Label("开始工作 (\(engine.preset.workMinutes) 分钟)", systemImage: "brain.head.profile")
+                Button(action: { engine.advanceToNextBlock() }) {
+                    Label(actionButtonTitle, systemImage: "laptopcomputer")
                 }
                 
             case .standby:
-                // 待机状态下：启动工作
-                Button(action: { engine.startWork() }) {
-                    Label("开始工作 (\(engine.preset.workMinutes) 分钟)", systemImage: "play.circle.fill")
+                Button(action: { engine.startCurrentBlock() }) {
+                    Label(actionButtonTitle, systemImage: "play.fill")
                 }
             }
             
-            // 待机出口（仅在工作中或休息中时展示）
+            // 运行中的流转控制
             if engine.mode != .standby {
+                Button(action: { engine.advanceToNextBlock() }) {
+                    Label("跳过本步", systemImage: "forward.fill")
+                }
+                
                 Button(action: { engine.enterStandby(reason: .manual) }) {
-                    Label("进入待机 (停止计时)", systemImage: "moon.fill")
+                    Label("进入待机", systemImage: "moon.fill")
                 }
             }
             
             Divider()
             
-            // 预设快速切换
-            Menu("切换预设") {
+            // 3. 方案切换
+            Menu("方案: \(engine.preset.name)") {
                 ForEach(presetStore.presets) { p in
                     Button(action: {
                         presetStore.activePresetId = p.id
                         engine.preset = p
                     }) {
                         HStack {
-                            Text(p.name)
+                            Text("\(p.name) (\(p.blocks.count)步)")
                             if engine.preset.id == p.id {
                                 Image(systemName: "checkmark")
                             }
@@ -70,28 +80,56 @@ public struct MenuBarContent: View {
                 }
             }
             
-            Divider()
-            
-            // 历史回顾与设置
-            Button(action: onOpenStats) {
-                Label("数据统计与回顾...", systemImage: "chart.bar.xaxis")
+            // 4. 打开主面板
+            Button("打开仪表台") {
+                onOpenDashboard()
             }
-            
-            Button(action: onOpenSettings) {
-                Label("偏好设置与预设库...", systemImage: "gearshape")
-            }
+            .keyboardShortcut("o")
             
             Divider()
             
-            // 今日累计简单概述
-            Text("今日专注 \(TimeFormatter.formatNatural(seconds: Int(engine.todayWorkSeconds))) · 休息 \(TimeFormatter.formatNatural(seconds: Int(engine.todayRestSeconds)))")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Divider()
-            
+            // 5. 退出
             Button("退出 BreakLoop", action: onQuit)
                 .keyboardShortcut("q")
+        }
+    }
+    
+    private var actionButtonTitle: String {
+        switch engine.mode {
+        case .working:
+            if let name = engine.nextBlock?.name, name != "休息" && name != "休息放松" && !name.isEmpty {
+                return "进入休息 · \(name)"
+            }
+            return "进入休息"
+        case .resting:
+            if let name = engine.nextBlock?.name, name != "工作" && name != "工作专注" && !name.isEmpty {
+                return "开始专注 · \(name)"
+            }
+            return "开始专注"
+        case .standby:
+            if let name = engine.currentBlock?.name, name != "工作" && name != "工作专注" && !name.isEmpty {
+                return "开始 · \(name)"
+            }
+            return "开始专注"
+        }
+    }
+    
+    private var stageSummaryText: String {
+        let blockName = engine.currentBlock?.name ?? "专注"
+        let total = max(1, engine.preset.blocks.count)
+        let step = engine.currentBlockIndex + 1
+        
+        switch engine.mode {
+        case .working:
+            return "[\(step)/\(total)] \(blockName) · 剩余 \(TimeFormatter.formatMinutesOnly(seconds: engine.currentSeconds))"
+        case .resting:
+            if let block = engine.currentBlock, block.timingMode == .countdown {
+                return "[\(step)/\(total)] \(blockName) · 剩余 \(TimeFormatter.formatMinutesOnly(seconds: engine.currentSeconds))"
+            } else {
+                return "[\(step)/\(total)] \(blockName) · 已休 \(max(1, engine.currentSeconds / 60))m"
+            }
+        case .standby:
+            return "待机中 · 下一步: [1/\(total)] \(engine.preset.blocks.first?.name ?? "")"
         }
     }
 }

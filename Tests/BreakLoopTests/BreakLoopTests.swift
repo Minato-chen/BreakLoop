@@ -225,4 +225,191 @@ final class BreakLoopTests: XCTestCase {
         engine.tick()
         XCTAssertEqual(receivedAlerts.last?.message, "站立活动")
     }
+    
+    // MARK: - 测试 7: 模块化流水线拼装循环与任意位置待机测试
+    func testModularPipelineLoopAndJump() {
+        // 自定义 4 模块：工作 20m -> 休息 5m(倒计时) -> 工作 30m -> 自由休息(正计时)
+        let customBlocks = [
+            FlowBlock.makeWork(name: "热身工作", minutes: 20),
+            FlowBlock.makeCountdownRest(name: "固定休息", minutes: 5),
+            FlowBlock.makeWork(name: "深度工作", minutes: 30),
+            FlowBlock.makeStopwatchRest(name: "自由大休", targetSeconds: 300)
+        ]
+        
+        let preset = Preset(
+            name: "我的快捷指令混合流",
+            blocks: customBlocks
+        )
+        
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        
+        XCTAssertEqual(engine.mode, .standby)
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        
+        // 1. 启动第 1 步 (工作 20m)
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertEqual(engine.currentBlock?.name, "热身工作")
+        XCTAssertEqual(engine.currentSeconds, 20 * 60)
+        
+        // 模拟第 1 步结束，推进到第 2 步 (休息 5m 倒计时)
+        simulatedDate.addTimeInterval(20 * 60)
+        engine.tick()
+        XCTAssertEqual(engine.currentBlockIndex, 1)
+        XCTAssertEqual(engine.mode, .resting)
+        XCTAssertEqual(engine.currentBlock?.name, "固定休息")
+        XCTAssertEqual(engine.currentBlock?.timingMode, .countdown)
+        XCTAssertEqual(engine.currentSeconds, 5 * 60)
+        
+        // 2. 任意位置跳出待机测试（在第 2 步休息中挂起进入待机）
+        engine.enterStandby(reason: .manual)
+        XCTAssertEqual(engine.mode, .standby)
+        // 验证待机后不会丢失当前模块定位
+        XCTAssertEqual(engine.currentBlockIndex, 1)
+        
+        // 3. 从待机唤醒并跳转到第 3 步 (深度工作 30m)
+        engine.jumpToBlock(index: 2)
+        XCTAssertEqual(engine.currentBlockIndex, 2)
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertEqual(engine.currentBlock?.name, "深度工作")
+        XCTAssertEqual(engine.currentSeconds, 30 * 60)
+        
+        // 模拟第 3 步结束，推进到第 4 步 (自由大休 正计时)
+        simulatedDate.addTimeInterval(30 * 60)
+        engine.tick()
+        XCTAssertEqual(engine.currentBlockIndex, 3)
+        XCTAssertEqual(engine.mode, .resting)
+        XCTAssertEqual(engine.currentBlock?.name, "自由大休")
+        XCTAssertEqual(engine.currentBlock?.timingMode, .stopwatch)
+        
+        // 4. 模拟第 4 步结束，测试回路闭环（循环回到第 0 步，大循环轮次 +1）
+        XCTAssertEqual(engine.completedCycles, 0)
+        engine.advanceToNextBlock()
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        XCTAssertEqual(engine.completedCycles, 1)
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertEqual(engine.currentBlock?.name, "热身工作")
+    }
+    
+    // MARK: - 测试 8: 模块向上插入与至少保留一个模块守卫
+    func testBlockInsertionAndSingleBlockGuard() {
+        var preset = Preset(
+            name: "单模块测试",
+            blocks: [
+                FlowBlock.makeWork(name: "初始工作", minutes: 25)
+            ]
+        )
+        
+        // 向上方插入休息模块（插入到 index 0）
+        let topBlock = FlowBlock.makeCountdownRest(name: "开头休息", minutes: 5)
+        preset.blocks.insert(topBlock, at: 0)
+        XCTAssertEqual(preset.blocks.count, 2)
+        XCTAssertEqual(preset.blocks[0].name, "开头休息")
+        XCTAssertEqual(preset.blocks[1].name, "初始工作")
+        
+        // 向下方追加模块（插入到末尾）
+        let bottomBlock = FlowBlock.makeWork(name: "末尾工作", minutes: 15)
+        preset.blocks.append(bottomBlock)
+        XCTAssertEqual(preset.blocks.count, 3)
+        XCTAssertEqual(preset.blocks[2].name, "末尾工作")
+        
+        // 测试至少保留 1 个模块守卫规则
+        func deleteBlock(from p: inout Preset, at index: Int) -> Bool {
+            guard p.blocks.count > 1 else { return false }
+            p.blocks.remove(at: index)
+            return true
+        }
+        
+        // 连续删除两次（从 3 个删到 1 个）
+        XCTAssertTrue(deleteBlock(from: &preset, at: 0))
+        XCTAssertEqual(preset.blocks.count, 2)
+        XCTAssertTrue(deleteBlock(from: &preset, at: 0))
+        XCTAssertEqual(preset.blocks.count, 1)
+        
+        // 最后 1 个模块时，删除应被拒绝拦截
+        XCTAssertFalse(deleteBlock(from: &preset, at: 0))
+        XCTAssertEqual(preset.blocks.count, 1)
+        XCTAssertEqual(preset.blocks[0].name, "末尾工作")
+    }
+    
+    // MARK: - 测试 9: 菜单栏时间提示不出现 < 等特殊符号
+    func testMenuBarTextAndNoLessThanSymbols() {
+        // 1. 小于 1 分钟（如 20 秒、45 秒）显示纯净 1m，绝无 < 符号
+        XCTAssertEqual(TimeFormatter.formatMinutesOnly(seconds: 20), "1m")
+        XCTAssertEqual(TimeFormatter.formatMinutesOnly(seconds: 45), "1m")
+        XCTAssertEqual(TimeFormatter.formatMinutesOnly(seconds: 0), "0m")
+        XCTAssertEqual(TimeFormatter.formatMinutesOnly(seconds: 60), "1m")
+        XCTAssertEqual(TimeFormatter.formatMinutesOnly(seconds: 90), "2m")
+        
+        // 2. 引擎菜单栏文本：无 + 或 < 等冗余符号
+        let preset = Preset(
+            name: "格式测试",
+            blocks: [
+                FlowBlock.makeWork(name: "专注", minutes: 25),
+                FlowBlock.makeStopwatchRest(name: "正计息", targetSeconds: 20)
+            ]
+        )
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        
+        // 待机状态
+        XCTAssertFalse(engine.menuBarText.contains("<"))
+        XCTAssertFalse(engine.menuBarText.contains("+"))
+        
+        // 工作状态
+        engine.startCurrentBlock()
+        XCTAssertFalse(engine.menuBarText.contains("<"))
+        XCTAssertFalse(engine.menuBarText.contains("+"))
+        
+        // 推进到自由正计时休息
+        engine.advanceToNextBlock()
+        simulatedDate.addTimeInterval(45)
+        engine.tick()
+        XCTAssertFalse(engine.menuBarText.contains("<"))
+        XCTAssertFalse(engine.menuBarText.contains("+"))
+    }
+    
+    // MARK: - 测试 10: 工作模块强制倒计时与固定属性守卫
+    func testWorkModuleStrictCountdownRule() {
+        let work = FlowBlock.makeWork(name: "专注", minutes: 30)
+        XCTAssertEqual(work.type, .work)
+        XCTAssertEqual(work.timingMode, .countdown)
+        
+        // 尝试初始化为工作 + 正计时，应被守卫强制修正为倒计时
+        let coercedWork = FlowBlock(type: .work, name: "专注测试", durationMinutes: 25, timingMode: .stopwatch)
+        XCTAssertEqual(coercedWork.type, .work)
+        XCTAssertEqual(coercedWork.timingMode, .countdown)
+        
+        // 休息模块则完全支持倒计时与正计时双重模式
+        let cdRest = FlowBlock.makeCountdownRest(name: "短休", minutes: 5)
+        XCTAssertEqual(cdRest.type, .rest)
+        XCTAssertEqual(cdRest.timingMode, .countdown)
+        
+        let swRest = FlowBlock.makeStopwatchRest(name: "看远方", targetSeconds: 20)
+        XCTAssertEqual(swRest.type, .rest)
+        XCTAssertEqual(swRest.timingMode, .stopwatch)
+    }
+    
+    // MARK: - 测试 11: 声音中心默认重复3次、长音保护与系统音预设
+    func testSoundManagerDefaultsAndCustomSounds() {
+        let soundManager = SoundManager.shared
+        // 默认 3 次重复
+        XCTAssertEqual(soundManager.defaultRepeatCount, 3)
+        // 默认截断时间处于 10~15 秒区间 (12.0)
+        XCTAssertGreaterThanOrEqual(soundManager.maxDurationSeconds, 10.0)
+        XCTAssertLessThanOrEqual(soundManager.maxDurationSeconds, 15.0)
+        
+        // 内置系统声音库存在且不少于 5 种常用声音
+        let allSounds = soundManager.allAvailableSounds()
+        XCTAssertGreaterThanOrEqual(allSounds.count, 5)
+        XCTAssertTrue(allSounds.contains(where: { $0.identifier == "Glass" }))
+        XCTAssertTrue(allSounds.contains(where: { $0.identifier == "Ping" }))
+    }
 }

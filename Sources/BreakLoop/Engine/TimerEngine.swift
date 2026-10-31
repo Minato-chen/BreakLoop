@@ -5,7 +5,7 @@ import Combine
 public enum TimerMode: String, Codable, Equatable {
     case standby    // 待机中（软件不计算任何时长）
     case working    // 工作中（倒计时）
-    case resting    // 休息中（自由正计时）
+    case resting    // 休息中（自由正计时或固定倒计时）
 }
 
 /// 提醒触发事件
@@ -17,28 +17,51 @@ public struct AlertTriggerEvent: Equatable {
     public let isLongRest: Bool
 }
 
-/// 计时器引擎（核心二元工作/休息逻辑 + 全局待机出口）
+/// 计时器引擎（低功耗、低内存、极简模块流水线）
 public final class TimerEngine: ObservableObject {
     @Published public private(set) var mode: TimerMode = .standby
-    @Published public private(set) var currentSeconds: Int = 0   // 当前显示的秒数
-    @Published public private(set) var targetSeconds: Int = 0    // 目标秒数
-    @Published public private(set) var completedCycles: Int = 0  // 已完成轮次
+    @Published public private(set) var currentSeconds: Int = 0       // 当前秒数
+    @Published public private(set) var targetSeconds: Int = 0        // 目标秒数
+    @Published public private(set) var completedCycles: Int = 0      // 已完成大循环轮次
+    @Published public private(set) var currentBlockIndex: Int = 0    // 当前流水线步数 (0-based)
+    @Published public private(set) var isLongRest: Bool = false      // 长休息标记
+    
+    // 专门供给菜单栏的高效低频分钟显示（仅在分钟变化时触发 UI 重绘，彻底消除 CPU 占用）
+    @Published public private(set) var menuBarText: String = ""
     
     @Published public var preset: Preset {
         didSet {
-            if mode == .standby {
-                targetSeconds = preset.workMinutes * 60
-                currentSeconds = targetSeconds
+            if currentBlockIndex >= preset.blocks.count {
+                currentBlockIndex = 0
             }
+            if mode == .standby {
+                resetToCurrentBlock()
+            }
+            updateMenuBarText()
+            syncToWidget()
         }
     }
     
-    // 今日累计时间（秒）
+    public var currentBlock: FlowBlock? {
+        guard !preset.blocks.isEmpty else { return nil }
+        let idx = min(max(0, currentBlockIndex), preset.blocks.count - 1)
+        return preset.blocks[idx]
+    }
+    
+    // 下一个模块预测（让用户一眼掌握下一步）
+    public var nextBlock: FlowBlock? {
+        guard !preset.blocks.isEmpty else { return nil }
+        let nextIdx = (currentBlockIndex + 1) % preset.blocks.count
+        return preset.blocks[nextIdx]
+    }
+    
     @Published public private(set) var todayWorkSeconds: TimeInterval = 0
     @Published public private(set) var todayRestSeconds: TimeInterval = 0
     
     private var sessionStartDate: Date?
     private var targetEndDate: Date?
+    private var hasTriggeredSoftTarget: Bool = false
+    private var lastRecordedMinute: Int = -1
     
     public let sessionStore: SessionStore
     public var nowProvider: () -> Date
@@ -57,73 +80,85 @@ public final class TimerEngine: ObservableObject {
         self.sessionStore = sessionStore
         self.nowProvider = nowProvider
         
-        self.targetSeconds = initialPreset.workMinutes * 60
-        self.currentSeconds = self.targetSeconds
+        let initialBlock = initialPreset.blocks.first
+        let initialDuration = (initialBlock?.durationMinutes ?? 20) * 60
+        self.targetSeconds = initialDuration
+        self.currentSeconds = initialDuration
         
         sessionStore.recoverUnfinishedSessionIfNeeded()
         refreshTodayStats()
+        updateMenuBarText()
     }
     
     deinit {
         stopTimers()
     }
     
-    // MARK: - 核心二元状态流转
+    // MARK: - 状态流转
     
-    /// 开始工作（全新一轮工作）
-    public func startWork() {
+    public func startCurrentBlock() {
+        guard let block = currentBlock else { return }
         let now = nowProvider()
+        
         if mode != .standby {
             closeCurrentSession(endedAt: now, reason: .completed)
         }
         
-        mode = .working
         sessionStartDate = now
-        targetSeconds = preset.workMinutes * 60
-        currentSeconds = targetSeconds
-        targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
+        hasTriggeredSoftTarget = false
+        lastRecordedMinute = -1
         
-        startTimer()
-        recordHeartbeat()
-        syncToWidget()
-    }
-    
-    /// 进入休息（无论是工作归零自动进入、还是用户点击休息、或是提前结束工作）
-    public func startRest() {
-        let now = nowProvider()
-        if mode == .working {
-            closeCurrentSession(endedAt: now, reason: .completed)
+        switch block.type {
+        case .work:
+            mode = .working
+            isLongRest = false
+            targetSeconds = max(1, block.durationMinutes) * 60
+            currentSeconds = targetSeconds
+            targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
+            
+        case .rest:
+            mode = .resting
+            isLongRest = (block.durationMinutes >= 15)
+            if block.timingMode == .countdown {
+                targetSeconds = max(1, block.durationMinutes) * 60
+                currentSeconds = targetSeconds
+                targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
+            } else {
+                targetSeconds = block.targetSeconds ?? (block.durationMinutes * 60)
+                currentSeconds = 0
+                targetEndDate = nil
+            }
         }
         
-        mode = .resting
-        sessionStartDate = now
-        currentSeconds = 0
-        targetSeconds = (preset.restTargetSeconds != nil) ? preset.restTargetSeconds! : (preset.restMinutes * 60)
-        targetEndDate = nil
+        startTimer()
+        recordInitialSession()
+        updateMenuBarText()
+        syncToWidget()
+    }
+    
+    public func advanceToNextBlock() {
+        guard !preset.blocks.isEmpty else {
+            enterStandby()
+            return
+        }
         
-        startTimer()
-        recordHeartbeat()
-        syncToWidget()
+        let nextIndex = currentBlockIndex + 1
+        if nextIndex >= preset.blocks.count {
+            completedCycles += 1
+            currentBlockIndex = 0
+        } else {
+            currentBlockIndex = nextIndex
+        }
+        
+        startCurrentBlock()
     }
     
-    /// 结束休息并开始下一轮工作
-    public func startNextWorkCycle() {
-        completedCycles += 1
-        startWork()
+    public func jumpToBlock(index: Int) {
+        guard index >= 0 && index < preset.blocks.count else { return }
+        currentBlockIndex = index
+        startCurrentBlock()
     }
     
-    /// 稍后提醒 5 分钟
-    public func snooze(minutes: Int = 5) {
-        let now = nowProvider()
-        mode = .working
-        targetSeconds = minutes * 60
-        currentSeconds = targetSeconds
-        targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
-        startTimer()
-        syncToWidget()
-    }
-    
-    /// 统一待机出口（停止所有计算，进入软件不计时状态）
     public func enterStandby(reason: EndReason = .manual, at time: Date? = nil) {
         guard mode != .standby else { return }
         let endAt = time ?? nowProvider()
@@ -135,69 +170,171 @@ public final class TimerEngine: ObservableObject {
         mode = .standby
         sessionStartDate = nil
         targetEndDate = nil
+        isLongRest = false
+        lastRecordedMinute = -1
         
-        targetSeconds = preset.workMinutes * 60
-        currentSeconds = targetSeconds
-        
+        resetToCurrentBlock()
         refreshTodayStats()
+        updateMenuBarText()
         syncToWidget()
     }
     
-    // MARK: - Tick 推进
-    public func tick() {
-        guard mode != .standby else { return }
-        let now = nowProvider()
-        
-        heartbeatCounter += 1
-        if heartbeatCounter >= 15 {
-            heartbeatCounter = 0
-            recordHeartbeat()
+    public func startWork() {
+        if let block = currentBlock, block.type == .work {
+            startCurrentBlock()
+        } else if let workIdx = preset.blocks.firstIndex(where: { $0.type == .work }) {
+            currentBlockIndex = workIdx
+            startCurrentBlock()
+        } else {
+            startCurrentBlock()
         }
+    }
+    
+    public func startRest() {
+        if let nextRestIdx = preset.blocks.indices.first(where: { $0 > currentBlockIndex && preset.blocks[$0].type == .rest }) {
+            currentBlockIndex = nextRestIdx
+            startCurrentBlock()
+        } else if let firstRestIdx = preset.blocks.firstIndex(where: { $0.type == .rest }) {
+            currentBlockIndex = firstRestIdx
+            startCurrentBlock()
+        } else {
+            advanceToNextBlock()
+        }
+    }
+    
+    public func startNextWorkCycle() {
+        advanceToNextBlock()
+    }
+    
+    public func snooze(minutes: Int = 5) {
+        let now = nowProvider()
+        mode = .working
+        targetSeconds = minutes * 60
+        currentSeconds = targetSeconds
+        targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
+        startTimer()
+        updateMenuBarText()
+        syncToWidget()
+    }
+    
+    private func resetToCurrentBlock() {
+        if let block = currentBlock {
+            let dur = (block.durationMinutes > 0 ? block.durationMinutes : 20) * 60
+            targetSeconds = dur
+            currentSeconds = dur
+        } else {
+            targetSeconds = 20 * 60
+            currentSeconds = targetSeconds
+        }
+    }
+    
+    // MARK: - 极简低频菜单栏文本计算
+    private func updateMenuBarText() {
+        let total = max(1, preset.blocks.count)
+        let step = currentBlockIndex + 1
         
         switch mode {
+        case .standby:
+            menuBarText = "\(total)步"
         case .working:
+            let mins = max(1, Int(ceil(Double(max(0, currentSeconds)) / 60.0)))
+            menuBarText = "\(step)/\(total) \(mins)m"
+        case .resting:
+            if let block = currentBlock, block.timingMode == .countdown {
+                let mins = max(1, Int(ceil(Double(max(0, currentSeconds)) / 60.0)))
+                menuBarText = "\(step)/\(total) \(mins)m"
+            } else {
+                let mins = max(1, currentSeconds / 60)
+                menuBarText = "\(step)/\(total) \(mins)m"
+            }
+        }
+    }
+    
+    // MARK: - Tick 推进 (高性能轻量化)
+    public func tick() {
+        guard mode != .standby, let block = currentBlock else { return }
+        let now = nowProvider()
+        
+        // 心跳维护：每 30 秒仅轻量更新时间戳，绝不做昂贵 JSON 编码
+        heartbeatCounter += 1
+        if heartbeatCounter >= 30 {
+            heartbeatCounter = 0
+            sessionStore.updateHeartbeatTimestamp(at: now)
+        }
+        
+        switch block.type {
+        case .work:
             guard let targetEnd = targetEndDate else { return }
             let remaining = targetEnd.timeIntervalSince(now)
             if remaining <= 0 {
                 currentSeconds = 0
-                triggerAlert()
-                // 倒计时结束直接进入休息
-                startRest()
+                triggerAlert(for: block)
+                advanceToNextBlock()
             } else {
                 currentSeconds = max(0, Int(ceil(remaining)))
             }
             
-        case .resting:
-            guard let start = sessionStartDate else { return }
-            let elapsed = now.timeIntervalSince(start)
-            let maxAllowedSeconds = Double(preset.restMaxMinutes * 60)
-            if elapsed >= maxAllowedSeconds {
-                enterStandby(reason: .restTimeout, at: now)
-                return
+        case .rest:
+            if block.timingMode == .countdown {
+                guard let targetEnd = targetEndDate else { return }
+                let remaining = targetEnd.timeIntervalSince(now)
+                if remaining <= 0 {
+                    currentSeconds = 0
+                    triggerAlert(for: block)
+                    if block.autoAdvance {
+                        advanceToNextBlock()
+                    } else {
+                        let maxAllowedSeconds = Double(preset.restMaxMinutes * 60)
+                        if let start = sessionStartDate, now.timeIntervalSince(start) >= maxAllowedSeconds {
+                            enterStandby(reason: .restTimeout, at: now)
+                        }
+                    }
+                } else {
+                    currentSeconds = max(0, Int(ceil(remaining)))
+                }
+            } else {
+                guard let start = sessionStartDate else { return }
+                let elapsed = now.timeIntervalSince(start)
+                
+                if let target = block.targetSeconds, target > 0, Int(elapsed) >= target, !hasTriggeredSoftTarget {
+                    hasTriggeredSoftTarget = true
+                    triggerAlert(for: block)
+                }
+                
+                let maxAllowedSeconds = Double(preset.restMaxMinutes * 60)
+                if elapsed >= maxAllowedSeconds {
+                    enterStandby(reason: .restTimeout, at: now)
+                    return
+                }
+                
+                currentSeconds = Int(elapsed)
             }
-            currentSeconds = Int(elapsed)
-            
-        case .standby:
-            break
+        }
+        
+        // 分钟变更判定：仅在整分钟变化时才更新菜单栏字符串并写小组件（杜绝每秒 I/O 与 Diff）
+        let currentMin = currentSeconds / 60
+        if currentMin != lastRecordedMinute {
+            lastRecordedMinute = currentMin
+            updateMenuBarText()
+            syncToWidget()
         }
     }
     
-    private func triggerAlert() {
+    private func triggerAlert(for block: FlowBlock) {
         let cycleNumber = completedCycles + 1
-        var msg = preset.message
+        var msg = block.message.isEmpty ? (block.type == .work ? "专注时间到" : "休息时间到") : block.message
         for rule in preset.rotation {
             if rule.everyNthCycle > 0 && cycleNumber % rule.everyNthCycle == 0 {
                 msg = rule.message
                 break
             }
         }
-        
         let event = AlertTriggerEvent(
             message: msg,
             style: preset.alertStyle,
-            soundName: preset.soundName,
+            soundName: block.soundName,
             cycleCount: cycleNumber,
-            isLongRest: false
+            isLongRest: isLongRest
         )
         onAlertTriggered?(event)
     }
@@ -211,21 +348,21 @@ public final class TimerEngine: ObservableObject {
             kind: kind,
             start: start,
             end: actualEnd,
-            presetName: preset.name,
+            presetName: "\(preset.name) · \(currentBlock?.name ?? "")",
             endReason: reason
         )
         sessionStore.append(session)
         refreshTodayStats()
     }
     
-    private func recordHeartbeat() {
+    private func recordInitialSession() {
         guard let start = sessionStartDate, mode != .standby else { return }
         let kind: SessionKind = (mode == .working) ? .work : .rest
         let ongoingSession = Session(
             kind: kind,
             start: start,
             end: nowProvider(),
-            presetName: preset.name,
+            presetName: "\(preset.name) · \(currentBlock?.name ?? "")",
             endReason: .manual
         )
         sessionStore.recordHeartbeat(session: ongoingSession, at: nowProvider())
@@ -251,7 +388,6 @@ public final class TimerEngine: ObservableObject {
         
         todayWorkSeconds = workSec
         todayRestSeconds = restSec
-        syncToWidget()
     }
     
     public func syncToWidget() {

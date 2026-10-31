@@ -37,9 +37,9 @@ public final class AlertManager {
         onSnooze: @escaping () -> Void,
         onDismiss: @escaping () -> Void
     ) {
-        // 1. 播放声音
+        // 1. 播放声音（支持多轮重复、自定义声音以及长音平滑渐弱截断）
         if event.style == .sound || event.style == .both {
-            playSound(named: event.soundName)
+            SoundManager.shared.play(soundName: event.soundName)
         }
         
         // 2. 弹窗提示
@@ -63,6 +63,7 @@ public final class AlertManager {
     }
     
     public func dismiss() {
+        SoundManager.shared.stop()
         alertWindowController?.close()
         alertWindowController = nil
     }
@@ -119,12 +120,12 @@ public struct AlertView: View {
     public var body: some View {
         VStack(spacing: 16) {
             HStack(spacing: 12) {
-                Image(systemName: "eyes")
+                Image(systemName: "cup.and.saucer.fill")
                     .font(.system(size: 26, weight: .semibold))
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(.green)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("该休息一下了")
+                    Text("该喝杯咖啡，休息一下了")
                         .font(.headline)
                         .foregroundColor(.primary)
                     Text(message)

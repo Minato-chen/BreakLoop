@@ -1,0 +1,22 @@
+# 实施任务清单：Apple Music 风格重构、书本/咖啡符号与系统小组件修复
+
+- [ ] Task 1: 符号与文案体系全面更新（工作 ➜ 书本 `book.closed.fill`，休息 ➜ 咖啡 `cup.and.saucer.fill`）
+  - 更新 `BreakLoop.swift` 菜单栏图标逻辑
+  - 更新 `DashboardView.swift` 核心展示图标
+  - 更新 `MenuBarContent.swift` 下拉项图标与文案
+  - 更新 `BreakLoopWidget.swift` 小组件图标
+- [ ] Task 2: Apple Music 扁平风格仪表盘界面重构 (`DashboardView.swift`)
+  - 引入柔和大漫反射背景光感与大圆角磨砂卡片
+  - 核心分钟排版（大号 Rounded 字体，无秒级干扰）
+  - Apple Music 胶囊级核心切换大按钮
+  - 精致通透的今日专注数据四宫格
+- [ ] Task 3: 菜单栏交互极简化与重构 (`MenuBarContent.swift`)
+  - 顶部增加状态胶囊
+  - 纯粹二元操作（`☕️ 去休息` / `📖 开始工作` / `🌙 待机`）
+  - 快捷打开主界面与预设方案
+- [ ] Task 4: macOS 原生小组件彻底嵌入与注册校验
+  - 修复 `project.yml` 中的嵌入规则，确保 `BreakLoopWidgetExtension` 完整放入 `BreakLoop.app/Contents/PlugIns/`
+  - 使用 `lsregister` 与系统扩展工具完成本地调试环境注册
+- [ ] Task 5: 验证与编译构建测试
+  - 运行并通过 Xcode 单元测试
+  - 编译并在本地启动验证

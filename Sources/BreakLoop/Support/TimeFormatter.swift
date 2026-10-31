@@ -2,15 +2,15 @@ import Foundation
 
 /// 时间显示与格式化工具（支持分钟级与简洁格式）
 public enum TimeFormatter {
-    /// 仅分钟级别显示（例如 25m、< 1m、4m）
+    /// 仅分钟级别显示（例如 25m、1m、4m，绝无 < 等符号干扰）
     public static func formatMinutesOnly(seconds: Int) -> String {
         if seconds <= 0 {
             return "0m"
         }
-        let mins = Int(ceil(Double(seconds) / 60.0))
         if seconds < 60 {
-            return "< 1m"
+            return "1m"
         }
+        let mins = Int(ceil(Double(seconds) / 60.0))
         return "\(mins)m"
     }
     

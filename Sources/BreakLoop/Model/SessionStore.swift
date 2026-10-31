@@ -9,6 +9,9 @@ public final class SessionStore {
     private let heartbeatTimestampKey = "BreakLoop.Heartbeat.timestamp"
     private let activeSessionKey = "BreakLoop.Heartbeat.activeSession"
     
+    // 内存轻量级缓存，杜绝重复从磁盘加载与 JSON 反序列化（大幅压低内存开销）
+    private var memoryCache: [String: [Session]] = [:]
+    
     private let dateFormatter: DateFormatter = {
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM"
@@ -51,10 +54,11 @@ public final class SessionStore {
         }
         
         return queue.sync {
+            let monthKey = dateFormatter.string(from: session.start)
             let url = fileURL(for: session.start)
-            var currentSessions = loadSessionsSync(from: url)
+            var currentSessions = loadSessionsSync(from: url, monthKey: monthKey)
             currentSessions.append(session)
-            return saveSessionsSync(currentSessions, to: url)
+            return saveSessionsSync(currentSessions, to: url, monthKey: monthKey)
         }
     }
     
@@ -71,7 +75,7 @@ public final class SessionStore {
                 if !visitedMonths.contains(monthStr) {
                     visitedMonths.insert(monthStr)
                     let url = fileURL(for: current)
-                    let list = loadSessionsSync(from: url)
+                    let list = loadSessionsSync(from: url, monthKey: monthStr)
                     result.append(contentsOf: list)
                 }
                 guard let next = calendar.date(byAdding: .month, value: 1, to: current) else { break }
@@ -106,6 +110,11 @@ public final class SessionStore {
         }
     }
     
+    /// 轻量更新心跳时间戳（无需任何 JSON 编解码）
+    public func updateHeartbeatTimestamp(at time: Date = Date()) {
+        userDefaults.set(time.timeIntervalSince1970, forKey: heartbeatTimestampKey)
+    }
+    
     /// 清除活跃心跳（正常进入待机或正常结束时调用）
     public func clearHeartbeat() {
         userDefaults.removeObject(forKey: heartbeatTimestampKey)
@@ -137,16 +146,22 @@ public final class SessionStore {
     }
     
     // MARK: - 私有辅助 (同步调用，需在 queue 内)
-    private func loadSessionsSync(from url: URL) -> [Session] {
+    private func loadSessionsSync(from url: URL, monthKey: String) -> [Session] {
+        if let cached = memoryCache[monthKey] {
+            return cached
+        }
         guard FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url),
               let sessions = try? JSONDecoder().decode([Session].self, from: data) else {
+            memoryCache[monthKey] = []
             return []
         }
+        memoryCache[monthKey] = sessions
         return sessions
     }
     
-    private func saveSessionsSync(_ sessions: [Session], to url: URL) -> Bool {
+    private func saveSessionsSync(_ sessions: [Session], to url: URL, monthKey: String) -> Bool {
+        memoryCache[monthKey] = sessions
         do {
             let data = try JSONEncoder().encode(sessions)
             try data.write(to: url, options: .atomic)

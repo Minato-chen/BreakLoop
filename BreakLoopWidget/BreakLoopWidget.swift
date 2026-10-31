@@ -174,7 +174,7 @@ struct BreakLoopWidgetEntryView: View {
     
     private var statusIcon: String {
         switch entry.data.modeRaw {
-        case "working": return "brain.head.profile"
+        case "working": return "book.closed.fill"
         case "resting": return "cup.and.saucer.fill"
         default: return "leaf.fill"
         }

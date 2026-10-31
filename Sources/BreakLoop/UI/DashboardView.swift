@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 专注控制仪表台视图（二元状态大按钮 + 纯分钟显示 + 今日概览）
+/// 极简现代扁平仪表盘（极简阶段展示、低功耗、零说明文字赘述）
 public struct DashboardView: View {
     @ObservedObject var engine: TimerEngine
     @ObservedObject var presetStore = PresetStore.shared
@@ -10,204 +10,297 @@ public struct DashboardView: View {
     }
     
     public var body: some View {
-        VStack(spacing: 24) {
-            // 顶部预设选择与全局待机按钮
-            HStack {
-                Menu {
-                    ForEach(presetStore.presets) { p in
-                        Button(action: {
-                            presetStore.activePresetId = p.id
-                            engine.preset = p
-                        }) {
-                            HStack {
-                                Text(p.name)
-                                if engine.preset.id == p.id {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "slider.horizontal.2.square")
-                        Text(engine.preset.name)
-                            .fontWeight(.medium)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(8)
-                }
-                .menuStyle(.borderlessButton)
+        ZStack {
+            // 背景层：轻量渐变（无繁重高斯模糊）
+            backgroundGlow
+            
+            VStack(spacing: 0) {
+                // 顶部：当前方案名 + 待机出口
+                topBar
+                    .padding(.horizontal, 32)
+                    .padding(.top, 20)
                 
                 Spacer()
                 
-                if engine.mode != .standby {
-                    Button(action: { engine.enterStandby(reason: .manual) }) {
-                        Label("进入待机", systemImage: "moon.fill")
-                            .font(.subheadline)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
-                }
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, 20)
-            
-            Spacer()
-            
-            // 核心大盘（分钟级倒计时与状态）
-            VStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .stroke(statusColor.opacity(0.12), lineWidth: 16)
-                        .frame(width: 200, height: 200)
-                    
-                    VStack(spacing: 6) {
-                        Image(systemName: statusIcon)
-                            .font(.system(size: 32, weight: .semibold))
-                            .foregroundColor(statusColor)
+                // 中央核心计时与控制
+                VStack(spacing: 18) {
+                    // 状态图标
+                    ZStack {
+                        Circle()
+                            .fill(themeColor.opacity(0.12))
+                            .frame(width: 110, height: 110)
                         
+                        Image(systemName: mainSymbol)
+                            .font(.system(size: 42, weight: .medium))
+                            .foregroundColor(themeColor)
+                    }
+                    
+                    // 分钟倒计时与当前阶段简标
+                    VStack(spacing: 4) {
                         Text(displayMinutes)
-                            .font(.system(size: 44, weight: .bold, design: .rounded))
+                            .font(.system(size: 60, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
                         
-                        Text(statusTitle)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.secondary)
+                        Text(stateTitle)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(themeColor)
                     }
+                    
+                    // 核心阶段指示轨（横向直观节点：已过/当前/未来）
+                    horizontalStageTrack
+                        .padding(.top, 6)
+                    
+                    // 核心操作按钮组（去休息/去工作 + 跳过）
+                    actionControlGroup
+                        .padding(.top, 10)
                 }
                 
-                // 核心大按钮：去休息 或 去工作
+                Spacer()
+                
+                // 底部轻量指标
+                HStack(spacing: 14) {
+                    summaryPill(
+                        title: "今日专注",
+                        value: TimeFormatter.formatNatural(seconds: Int(engine.todayWorkSeconds)),
+                        icon: "laptopcomputer",
+                        color: .blue
+                    )
+                    summaryPill(
+                        title: "今日休息",
+                        value: TimeFormatter.formatNatural(seconds: Int(engine.todayRestSeconds)),
+                        icon: "cup.and.saucer.fill",
+                        color: .green
+                    )
+                    summaryPill(
+                        title: "循环轮次",
+                        value: "\(engine.completedCycles) 轮",
+                        icon: "arrow.triangle.2.circlepath",
+                        color: .purple
+                    )
+                }
+                .padding(.horizontal, 32)
+                .padding(.bottom, 24)
+            }
+        }
+    }
+    
+    // MARK: - 顶部工具栏
+    private var topBar: some View {
+        HStack {
+            HStack(spacing: 6) {
+                Image(systemName: "square.stack.3d.down.right.fill")
+                    .font(.caption)
+                    .foregroundColor(.accentColor)
+                Text(engine.preset.name)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color(NSColor.controlBackgroundColor))
+            .clipShape(Capsule())
+            
+            Spacer()
+            
+            if engine.mode != .standby {
+                Button(action: { engine.enterStandby(reason: .manual) }) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "moon.fill")
+                        Text("进入待机")
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+    
+    // MARK: - 横向直观节点轨（目前到哪个阶段一眼看懂）
+    private var horizontalStageTrack: some View {
+        HStack(spacing: 6) {
+            ForEach(Array(engine.preset.blocks.enumerated()), id: \.element.id) { index, block in
+                let isCurrent = (engine.mode != .standby && engine.currentBlockIndex == index)
+                let isDone = (engine.mode != .standby && engine.currentBlockIndex > index)
+                let blockColor: Color = block.type == .work ? .blue : (block.timingMode == .stopwatch ? .purple : .green)
+                
+                HStack(spacing: 4) {
+                    if isDone {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
+                    Text(block.name)
+                        .font(.system(size: 11, weight: isCurrent ? .bold : .medium))
+                        .foregroundColor(isCurrent ? blockColor : (isDone ? .secondary : .secondary.opacity(0.6)))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    isCurrent ? blockColor.opacity(0.14) : (isDone ? Color.primary.opacity(0.04) : Color.clear)
+                )
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule().stroke(isCurrent ? blockColor : Color.primary.opacity(0.08), lineWidth: isCurrent ? 1.5 : 1)
+                )
+                
+                if index < engine.preset.blocks.count - 1 {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(.secondary.opacity(0.35))
+                }
+            }
+        }
+    }
+    
+    // MARK: - 核心操作按钮组
+    private var actionControlGroup: some View {
+        HStack(spacing: 12) {
+            Group {
                 switch engine.mode {
                 case .working:
-                    Button(action: { engine.startRest() }) {
-                        HStack(spacing: 8) {
+                    Button(action: { engine.advanceToNextBlock() }) {
+                        HStack(spacing: 6) {
                             Image(systemName: "cup.and.saucer.fill")
-                            Text("去休息")
+                            Text("进入休息")
                         }
-                        .font(.system(size: 16, weight: .semibold))
-                        .frame(width: 180, height: 44)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 150, height: 42)
+                        .background(Color.green)
+                        .clipShape(Capsule())
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
-                    .clipShape(Capsule())
+                    .buttonStyle(.plain)
                     
                 case .resting:
-                    Button(action: { engine.startNextWorkCycle() }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "brain.head.profile")
-                            Text("开始工作")
+                    Button(action: { engine.advanceToNextBlock() }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "laptopcomputer")
+                            Text("开始专注")
                         }
-                        .font(.system(size: 16, weight: .semibold))
-                        .frame(width: 180, height: 44)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 150, height: 42)
+                        .background(Color.blue)
+                        .clipShape(Capsule())
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.accentColor)
-                    .clipShape(Capsule())
+                    .buttonStyle(.plain)
                     
                 case .standby:
-                    Button(action: { engine.startWork() }) {
-                        HStack(spacing: 8) {
+                    Button(action: { engine.startCurrentBlock() }) {
+                        HStack(spacing: 6) {
                             Image(systemName: "play.fill")
-                            Text("开始专注 (\(engine.preset.workMinutes)m)")
+                            Text("开始专注")
                         }
-                        .font(.system(size: 16, weight: .semibold))
-                        .frame(width: 190, height: 44)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 160, height: 42)
+                        .background(Color.accentColor)
+                        .clipShape(Capsule())
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.accentColor)
-                    .clipShape(Capsule())
+                    .buttonStyle(.plain)
                 }
             }
             
-            Spacer()
-            
-            // 底部今日指标小卡片
-            HStack(spacing: 14) {
-                metricCard(
-                    title: "今日专注",
-                    value: TimeFormatter.formatNatural(seconds: Int(engine.todayWorkSeconds)),
-                    icon: "brain.head.profile",
-                    color: .orange
-                )
-                metricCard(
-                    title: "今日休息",
-                    value: TimeFormatter.formatNatural(seconds: Int(engine.todayRestSeconds)),
-                    icon: "cup.and.saucer.fill",
-                    color: .green
-                )
-                metricCard(
-                    title: "完成轮次",
-                    value: "\(engine.completedCycles) 轮",
-                    icon: "repeat",
-                    color: .accentColor
-                )
+            // 跳过本步
+            if engine.mode != .standby {
+                Button(action: { engine.advanceToNextBlock() }) {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .frame(width: 40, height: 42)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help("跳过本步")
             }
-            .padding(.horizontal, 28)
-            .padding(.bottom, 24)
         }
     }
     
-    // MARK: - 辅助组件
-    private func metricCard(title: String, value: String, icon: String, color: Color) -> some View {
+    // MARK: - 底部指标
+    private func summaryPill(title: String, value: String, icon: String, color: Color) -> some View {
         HStack(spacing: 10) {
-            Circle()
-                .fill(color.opacity(0.15))
-                .frame(width: 34, height: 34)
-                .overlay(
-                    Image(systemName: icon)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(color)
-                )
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(color)
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .font(.caption)
+                    .font(.system(size: 10))
                     .foregroundColor(.secondary)
                 Text(value)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
             }
             Spacer()
         }
-        .padding(10)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(10)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
     
+    // MARK: - 轻量背景
+    private var backgroundGlow: some View {
+        LinearGradient(
+            colors: [themeColor.opacity(0.08), Color.clear],
+            startPoint: .top,
+            endPoint: .center
+        )
+        .ignoresSafeArea()
+    }
+    
+    // MARK: - 动态计算属性
     private var displayMinutes: String {
         switch engine.mode {
         case .working:
             return TimeFormatter.formatMinutesOnly(seconds: engine.currentSeconds)
         case .resting:
-            return "\(max(1, engine.currentSeconds / 60))m"
+            if let block = engine.currentBlock, block.timingMode == .countdown {
+                return TimeFormatter.formatMinutesOnly(seconds: engine.currentSeconds)
+            } else {
+                return "+\(max(1, engine.currentSeconds / 60))m"
+            }
         case .standby:
-            return "\(engine.preset.workMinutes)m"
+            return "\(engine.currentBlock?.durationMinutes ?? 20)m"
         }
     }
     
-    private var statusTitle: String {
+    private var stateTitle: String {
+        let blockName = engine.currentBlock?.name ?? "专注"
+        let total = max(1, engine.preset.blocks.count)
+        let step = engine.currentBlockIndex + 1
+        
         switch engine.mode {
-        case .working: return "沉浸工作中"
-        case .resting: return "身心放松中"
-        case .standby: return "就绪待机"
+        case .working:
+            return "[\(step)/\(total)] \(blockName)"
+        case .resting:
+            return "[\(step)/\(total)] \(blockName)"
+        case .standby:
+            return "待命中 · 下一步: \(blockName)"
         }
     }
     
-    private var statusColor: Color {
+    private var mainSymbol: String {
+        guard let block = engine.currentBlock else { return "leaf.fill" }
         switch engine.mode {
-        case .working: return .orange
-        case .resting: return .green
-        case .standby: return .secondary
-        }
-    }
-    
-    private var statusIcon: String {
-        switch engine.mode {
-        case .working: return "brain.head.profile"
-        case .resting: return "cup.and.saucer.fill"
+        case .working: return "laptopcomputer"
+        case .resting:
+            return (block.timingMode == .stopwatch) ? "figure.walk" : "cup.and.saucer.fill"
         case .standby: return "leaf.fill"
+        }
+    }
+    
+    private var themeColor: Color {
+        guard let block = engine.currentBlock else { return .accentColor }
+        switch engine.mode {
+        case .working: return .blue
+        case .resting:
+            return (block.timingMode == .stopwatch) ? .purple : .green
+        case .standby: return .accentColor
         }
     }
 }

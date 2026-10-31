@@ -63,12 +63,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func showMainWindow() {
         if mainWindow == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 780, height: 540),
-                styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                contentRect: NSRect(x: 0, y: 0, width: 880, height: 560),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
             window.title = "BreakLoop"
+            window.titlebarAppearsTransparent = true
             window.center()
             window.delegate = self
             window.contentView = NSHostingView(rootView: MainAppView(engine: engine))
@@ -93,19 +94,9 @@ struct BreakLoopApp: App {
     var body: some Scene {
         // 菜单栏保留轻量控制入口
         MenuBarExtra {
-            Button("打开 BreakLoop 仪表台...") {
-                appDelegate.showMainWindow()
-            }
-            .keyboardShortcut("o")
-            
-            Divider()
-            
             MenuBarContent(
                 engine: appDelegate.engine,
-                onOpenStats: {
-                    appDelegate.showMainWindow()
-                },
-                onOpenSettings: {
+                onOpenDashboard: {
                     appDelegate.showMainWindow()
                 },
                 onQuit: {
@@ -115,9 +106,9 @@ struct BreakLoopApp: App {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: menuBarIcon)
-                if menuBarShowTime && appDelegate.engine.mode != .standby {
-                    Text(TimeFormatter.formatMinutesOnly(seconds: appDelegate.engine.currentSeconds))
-                        .font(.system(size: 12, design: .rounded))
+                if menuBarShowTime {
+                    Text(appDelegate.engine.menuBarText)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
                 }
             }
         }
@@ -126,11 +117,11 @@ struct BreakLoopApp: App {
     private var menuBarIcon: String {
         switch appDelegate.engine.mode {
         case .working:
-            return "brain.head.profile"
+            return "book.closed.fill"   // 统一为书本
         case .resting:
-            return "cup.and.saucer.fill"
+            return "cup.and.saucer.fill" // 统一为咖啡
         case .standby:
-            return "leaf.fill"
+            return "leaf.fill"           // 待机绿叶
         }
     }
 }
