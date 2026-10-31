@@ -14,6 +14,24 @@ public final class HotKeyManager {
     
     public var onAction: ((HotKeyAction) -> Void)?
     private var hotKeyRefs: [EventHotKeyRef] = []
+    public private(set) var isRegistered: Bool = false
+    
+    public static var isEnabledInUserDefaults: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: "BreakLoop.EnableGlobalHotKeys") == nil {
+                return true // 默认开启
+            }
+            return UserDefaults.standard.bool(forKey: "BreakLoop.EnableGlobalHotKeys")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "BreakLoop.EnableGlobalHotKeys")
+            if newValue {
+                shared.registerDefaultHotKeys()
+            } else {
+                shared.unregisterAll()
+            }
+        }
+    }
     
     private init() {}
     
@@ -58,6 +76,7 @@ public final class HotKeyManager {
         registerHotKey(id: .startRest, keyCode: UInt32(kVK_ANSI_R), modifiers: UInt32(optionKey | shiftKey))
         // 3. Option + Shift + Escape: 进入待机
         registerHotKey(id: .enterStandby, keyCode: UInt32(kVK_Escape), modifiers: UInt32(optionKey | shiftKey))
+        isRegistered = true
     }
     
     private func registerHotKey(id: HotKeyAction, keyCode: UInt32, modifiers: UInt32) {
@@ -74,5 +93,6 @@ public final class HotKeyManager {
             UnregisterEventHotKey(ref)
         }
         hotKeyRefs.removeAll()
+        isRegistered = false
     }
 }

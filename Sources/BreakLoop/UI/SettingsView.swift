@@ -208,11 +208,9 @@ public struct AboutView: View {
     public var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
             VStack(spacing: 20) {
-                // 顶部应用标志
+                // 顶部应用标志（苹果风双弧流转环）
                 VStack(spacing: 8) {
-                    Image(systemName: "circle.circle.fill")
-                        .font(.system(size: 56))
-                        .foregroundColor(.accentColor)
+                    BrandLogoView(size: 60, showGlow: true)
                     
                     Text("BreakLoop")
                         .font(.system(size: 22, weight: .bold))

@@ -180,7 +180,7 @@ public struct PipelineFlowCanvasView: View {
                         .textFieldStyle(.plain)
                         .frame(minWidth: 70, maxWidth: 120)
                     
-                    Text(isWork ? "专注" : (isStopwatch ? "自由休息" : "休息"))
+                    Text(isWork ? "专注" : (isStopwatch ? "休息(自由)" : "休息"))
                         .font(.system(size: 10, weight: .medium))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
@@ -408,7 +408,17 @@ public struct PipelineFlowCanvasView: View {
                                 Text("休息形式:")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                Picker("", selection: binding(for: index).timingMode) {
+                                Picker("", selection: Binding(
+                                    get: { block.timingMode },
+                                    set: { newMode in
+                                        binding(for: index).timingMode.wrappedValue = newMode
+                                        if newMode == .countdown {
+                                            binding(for: index).name.wrappedValue = "休息"
+                                        } else {
+                                            binding(for: index).name.wrappedValue = "休息(自由)"
+                                        }
+                                    }
+                                )) {
                                     Text("⏳ 固定倒计时").tag(BlockTimingMode.countdown)
                                     Text("⏱️ 自由休息 (正计时)").tag(BlockTimingMode.stopwatch)
                                 }

@@ -37,11 +37,9 @@ public struct MainAppView: View {
         HStack(spacing: 0) {
             // 1. 扁平定制原生侧边栏（彻底杜绝 NavigationSplitView 固有弹跳）
             VStack(alignment: .leading, spacing: 4) {
-                // 顶部极简品牌标识
+                // 顶部极简品牌标识（苹果风双弧流转呼吸环）
                 HStack(spacing: 8) {
-                    Image(systemName: "circle.circle.fill")
-                        .foregroundColor(.accentColor)
-                        .font(.system(size: 16))
+                    BrandLogoView(size: 16)
                     Text("BreakLoop")
                         .font(.system(size: 14, weight: .bold))
                 }

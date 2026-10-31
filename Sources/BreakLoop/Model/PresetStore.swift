@@ -25,6 +25,9 @@ public final class PresetStore: ObservableObject {
                 if b.type == .work && (b.name == "工作" || b.name == "工作专注") {
                     sanitizedPresets[pIdx].blocks[bIdx].name = "专注"
                     didMigrate = true
+                } else if b.type == .rest && b.timingMode == .stopwatch && (b.name == "自由休息" || b.name == "自由大休") {
+                    sanitizedPresets[pIdx].blocks[bIdx].name = "休息(自由)"
+                    didMigrate = true
                 }
             }
         }

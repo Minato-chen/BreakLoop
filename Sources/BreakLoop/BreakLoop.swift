@@ -45,7 +45,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self.engine.enterStandby(reason: .manual)
             }
         }
-        HotKeyManager.shared.registerDefaultHotKeys()
+        if HotKeyManager.isEnabledInUserDefaults {
+            HotKeyManager.shared.registerDefaultHotKeys()
+        }
         
         // 4. 自动检查软件版本更新（若开启）
         if UserDefaults.standard.object(forKey: "BreakLoop.AutoCheckUpdate") == nil || UserDefaults.standard.bool(forKey: "BreakLoop.AutoCheckUpdate") {
@@ -123,11 +125,11 @@ struct BreakLoopApp: App {
     private var menuBarIcon: String {
         switch appDelegate.engine.mode {
         case .working:
-            return "book.closed.fill"   // 统一为书本
+            return "record.circle"       // 专注中：聚焦环
         case .resting:
-            return "cup.and.saucer.fill" // 统一为咖啡
+            return "cup.and.saucer.fill" // 休息中：咖啡杯
         case .standby:
-            return "leaf.fill"           // 待机绿叶
+            return "circle.dashed"       // 待机中：流转环
         }
     }
 }

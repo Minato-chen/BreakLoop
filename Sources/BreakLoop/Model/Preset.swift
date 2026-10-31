@@ -133,7 +133,7 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
     }
     
     /// 快捷创建固定倒计时休息模块
-    public static func makeCountdownRest(name: String = "固定休息", minutes: Int = 5, message: String = "休息结束，准备开始下一轮专注", sound: String = "Ping") -> FlowBlock {
+    public static func makeCountdownRest(name: String = "休息", minutes: Int = 5, message: String = "休息结束，准备开始下一轮专注", sound: String = "Ping") -> FlowBlock {
         FlowBlock(
             type: .rest,
             name: name,
@@ -147,7 +147,7 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
     }
     
     /// 快捷创建自由正计时休息模块（用户自己决定）
-    public static func makeStopwatchRest(name: String = "自由休息", targetSeconds: Int = 20, message: String = "看远方 20 秒", sound: String = "Glass") -> FlowBlock {
+    public static func makeStopwatchRest(name: String = "休息(自由)", targetSeconds: Int = 20, message: String = "看远方 20 秒", sound: String = "Glass") -> FlowBlock {
         FlowBlock(
             type: .rest,
             name: name,
@@ -396,7 +396,7 @@ public struct Preset: Codable, Identifiable, Equatable {
                 name: "健康循环",
                 blocks: [
                     FlowBlock.makeWork(name: "专注", minutes: 20, message: "20 分钟到了，起身远眺休息片刻", sound: "Glass"),
-                    FlowBlock.makeStopwatchRest(name: "自由休息", targetSeconds: 20, message: "看远方 20 秒（20英尺外）", sound: "Glass")
+                    FlowBlock.makeStopwatchRest(name: "休息(自由)", targetSeconds: 20, message: "看远方 20 秒（20英尺外）", sound: "Glass")
                 ],
                 restMaxMinutes: 30,
                 idleMinutes: 10,

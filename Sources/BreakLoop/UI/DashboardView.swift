@@ -30,9 +30,13 @@ public struct DashboardView: View {
                             .fill(themeColor.opacity(0.12))
                             .frame(width: 110, height: 110)
                         
-                        Image(systemName: mainSymbol)
-                            .font(.system(size: 42, weight: .medium))
-                            .foregroundColor(themeColor)
+                        if engine.mode == .standby {
+                            BrandLogoView(size: 46, showGlow: true)
+                        } else {
+                            Image(systemName: mainSymbol)
+                                .font(.system(size: 42, weight: .medium))
+                                .foregroundColor(themeColor)
+                        }
                     }
                     
                     // 分钟倒计时与当前阶段简标

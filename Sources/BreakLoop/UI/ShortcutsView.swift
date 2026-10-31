@@ -3,6 +3,8 @@ import AppKit
 
 /// 独立顶级大类：快捷键管理与速查中心
 public struct ShortcutsView: View {
+    @AppStorage("BreakLoop.EnableGlobalHotKeys") private var enableGlobalHotKeys: Bool = true
+    
     public init() {}
     
     public var body: some View {
@@ -13,11 +15,12 @@ public struct ShortcutsView: View {
                 
                 Divider()
                 
-                // 2. 全局生效状态说明卡片
+                // 2. 全局生效状态与开关控制
                 statusBanner
                 
                 // 3. 快捷键详细列表卡片
                 shortcutsListSection
+                    .opacity(enableGlobalHotKeys ? 1.0 : 0.5)
                 
                 // 4. 常见问题与小提示
                 tipsSection
@@ -48,28 +51,36 @@ public struct ShortcutsView: View {
         }
     }
     
-    // MARK: - 运行状态横幅
+    // MARK: - 运行状态横幅（带一键开启/关闭总开关）
     private var statusBanner: some View {
         HStack(spacing: 12) {
-            Image(systemName: "checkmark.shield.fill")
-                .font(.system(size: 20))
-                .foregroundColor(.green)
+            Image(systemName: enableGlobalHotKeys ? "checkmark.shield.fill" : "slash.circle.fill")
+                .font(.system(size: 22))
+                .foregroundColor(enableGlobalHotKeys ? .green : .secondary)
             
             VStack(alignment: .leading, spacing: 2) {
-                Text("系统级全局热键处于常驻激活状态")
+                Text(enableGlobalHotKeys ? "系统级全局热键处于常驻激活状态" : "全局快捷键已关闭停用")
                     .font(.system(size: 13, weight: .semibold))
-                Text("无需聚焦 BreakLoop 主窗口，在任何应用、终端或全屏 IDE 下均可直接按下生效")
+                    .foregroundColor(enableGlobalHotKeys ? .primary : .secondary)
+                Text(enableGlobalHotKeys ? "无需聚焦 BreakLoop，在任何应用、终端或全屏 IDE 下均可直接按下生效" : "当前已完全注销系统全局热键监听，绝不与任何第三方软件产生冲突")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
+            
             Spacer()
+            
+            Toggle("", isOn: $enableGlobalHotKeys)
+                .toggleStyle(.switch)
+                .onChange(of: enableGlobalHotKeys) { enabled in
+                    HotKeyManager.isEnabledInUserDefaults = enabled
+                }
         }
         .padding(14)
-        .background(Color.green.opacity(0.08))
+        .background(enableGlobalHotKeys ? Color.green.opacity(0.08) : Color.primary.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.green.opacity(0.2), lineWidth: 1)
+                .stroke(enableGlobalHotKeys ? Color.green.opacity(0.2) : Color.primary.opacity(0.1), lineWidth: 1)
         )
     }
     
