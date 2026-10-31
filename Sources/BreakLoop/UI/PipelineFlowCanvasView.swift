@@ -416,6 +416,7 @@ public struct PipelineFlowCanvasView: View {
                                             binding(for: index).name.wrappedValue = "休息"
                                         } else {
                                             binding(for: index).name.wrappedValue = "休息(自由)"
+                                            binding(for: index).autoAdvance.wrappedValue = false
                                         }
                                     }
                                 )) {
@@ -519,9 +520,11 @@ public struct PipelineFlowCanvasView: View {
                                 .frame(maxWidth: .infinity)
                         }
                         
-                        // (4) 结束后自动推进
-                        Toggle("休息结束后自动推进到下一步", isOn: binding(for: index).autoAdvance)
-                            .font(.caption)
+                        // (4) 结束后自动推进（仅固定倒计时有效；正计时自由休息没有自然结束，隐藏此项）
+                        if block.timingMode == .countdown {
+                            Toggle("休息结束后自动推进到下一步", isOn: binding(for: index).autoAdvance)
+                                .font(.caption)
+                        }
                     }
                     .padding(12)
                     .background(Color.primary.opacity(0.02))

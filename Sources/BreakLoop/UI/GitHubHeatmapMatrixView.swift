@@ -84,12 +84,14 @@ public struct GitHubHeatmapMatrixView: View {
             HStack(alignment: .center) {
                 if let hover = hoveredCell {
                     HStack(spacing: 8) {
-                        Text("\(hover.day.dateString) \(String(format: "%02d:00", hover.hour.hour))")
+                        Text("\(hover.day.weekdayName) \(hover.day.dateString) \(String(format: "%02d:00", hover.hour.hour))")
                             .fontWeight(.semibold)
-                        Text("💼 专注: \(hover.hour.workMinutes)m")
-                            .foregroundColor(.orange)
-                        Text("🍵 休息: \(hover.hour.restMinutes)m")
-                            .foregroundColor(.green)
+                        Text("💻 专注: \(hover.hour.workMinutes)m")
+                            .foregroundColor(gitHubGreen(minutes: hover.hour.workMinutes))
+                        if hover.hour.restMinutes > 0 {
+                            Text("☕️ 休息: \(hover.hour.restMinutes)m")
+                                .foregroundColor(restBadgeColor)
+                        }
                     }
                     .font(.caption)
                     .padding(.horizontal, 8)
@@ -97,36 +99,43 @@ public struct GitHubHeatmapMatrixView: View {
                     .background(Color(NSColor.controlBackgroundColor))
                     .cornerRadius(6)
                 } else {
-                    Text("鼠标悬停在小时方块上查看具体专注与休息明细")
+                    Text("鼠标悬停在方块上查看具体专注与休息明细")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 
                 Spacer()
                 
-                // 图例 Legend
-                HStack(spacing: 8) {
-                    HStack(spacing: 3) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.orange.opacity(0.85))
-                            .frame(width: 10, height: 10)
-                        Text("专注")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack(spacing: 3) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.green.opacity(0.85))
-                            .frame(width: 10, height: 10)
-                        Text("休息")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Text("深浅 = 时长")
+                // GitHub 经典图例 (少 ⬛ 🟩 🟩 🟩 🟩 多) + 休息微标
+                HStack(spacing: 6) {
+                    Text("少")
                         .font(.system(size: 10))
-                        .foregroundColor(.secondary.opacity(0.7))
+                        .foregroundColor(.secondary)
+                    
+                    HStack(spacing: 3) {
+                        levelSquare(level0Color)
+                        levelSquare(Color(red: 0.055, green: 0.267, blue: 0.161)) // L1
+                        levelSquare(Color(red: 0.000, green: 0.427, blue: 0.196)) // L2
+                        levelSquare(Color(red: 0.149, green: 0.651, blue: 0.255)) // L3
+                        levelSquare(Color(red: 0.224, green: 0.827, blue: 0.325)) // L4
+                    }
+                    
+                    Text("多")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    
+                    Divider()
+                        .frame(height: 12)
+                        .padding(.horizontal, 2)
+                    
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(restBadgeColor)
+                            .frame(width: 6, height: 6)
+                        Text("含休息")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             .padding(.top, 6)
@@ -136,34 +145,36 @@ public struct GitHubHeatmapMatrixView: View {
         .cornerRadius(12)
     }
     
-    // MARK: - 单个双拼小时方块
+    private func levelSquare(_ color: Color) -> some View {
+        RoundedRectangle(cornerRadius: 2)
+            .fill(color)
+            .frame(width: 10, height: 10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 2)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+            )
+    }
+    
+    // MARK: - 方案 1：整块经典 GitHub 绿 + 休息微角标
     private func heatmapCell(day: DayActivity, hour: HourActivity) -> some View {
-        let hasActivity = hour.workMinutes > 0 || hour.restMinutes > 0
+        let hasWork = hour.workMinutes > 0
+        let hasRest = hour.restMinutes > 0
         
-        return GeometryReader { geo in
-            ZStack {
-                // 底板（无活动时的浅灰底）
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.primary.opacity(0.06))
-                
-                if hasActivity {
-                    HStack(spacing: 0) {
-                        // 左半边：工作时长（黄色系/暖金）
-                        if hour.workMinutes > 0 {
-                            Rectangle()
-                                .fill(workColor(minutes: hour.workMinutes))
-                                .frame(width: hour.restMinutes > 0 ? geo.size.width / 2 : geo.size.width)
-                        }
-                        
-                        // 右半边：休息时长（绿色系/薄荷绿）
-                        if hour.restMinutes > 0 {
-                            Rectangle()
-                                .fill(restColor(minutes: hour.restMinutes))
-                                .frame(width: hour.workMinutes > 0 ? geo.size.width / 2 : geo.size.width)
-                        }
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
-                }
+        return ZStack(alignment: .bottomTrailing) {
+            // 主体：整块圆角方格（无活动为暗底，有专注时长则呈现正宗 GitHub 绿色阶）
+            RoundedRectangle(cornerRadius: 3.5)
+                .fill(hasWork ? gitHubGreen(minutes: hour.workMinutes) : level0Color)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3.5)
+                        .stroke(Color.primary.opacity(0.06), lineWidth: 0.6)
+                )
+            
+            // 休息微角标：优雅内嵌于右下角（薄荷冰蓝点），保留整块规整性，绝不破碎对半切
+            if hasRest {
+                Circle()
+                    .fill(restBadgeColor)
+                    .frame(width: 4, height: 4)
+                    .padding(2.5)
             }
         }
         .frame(height: 18)
@@ -176,28 +187,34 @@ public struct GitHubHeatmapMatrixView: View {
         }
     }
     
-    // MARK: - 颜色深度计算 (类似 GitHub 4 级色深)
-    private func workColor(minutes: Int) -> Color {
-        if minutes >= 45 {
-            return Color.orange // 满格专注
-        } else if minutes >= 25 {
-            return Color.orange.opacity(0.75)
-        } else if minutes >= 10 {
-            return Color.orange.opacity(0.5)
-        } else {
-            return Color.orange.opacity(0.28)
-        }
+    // MARK: - GitHub 原生 Primer 绿色阶 (100% 独立实色，暗黑模式通透纯正)
+    private var level0Color: Color {
+        Color(NSColor(name: nil, dynamicProvider: { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(red: 0.09, green: 0.11, blue: 0.13, alpha: 1.0) // #161b22
+                : NSColor(red: 0.92, green: 0.93, blue: 0.94, alpha: 1.0) // #ebedf0
+        }))
     }
     
-    private func restColor(minutes: Int) -> Color {
-        if minutes >= 20 {
-            return Color.green // 深度休息
-        } else if minutes >= 10 {
-            return Color.green.opacity(0.75)
-        } else if minutes >= 4 {
-            return Color.green.opacity(0.5)
+    private var restBadgeColor: Color {
+        Color(red: 0.35, green: 0.65, blue: 1.0) // #58A6FF GitHub Accent Blue
+    }
+    
+    private func gitHubGreen(minutes: Int) -> Color {
+        if minutes >= 45 {
+            // Level 4 (45m+): 顶格荧光翠绿 #39d353
+            return Color(red: 0.224, green: 0.827, blue: 0.325)
+        } else if minutes >= 30 {
+            // Level 3 (30~44m): 鲜活草绿 #26a641
+            return Color(red: 0.149, green: 0.651, blue: 0.255)
+        } else if minutes >= 15 {
+            // Level 2 (15~29m): 经典中绿 #006d32
+            return Color(red: 0.000, green: 0.427, blue: 0.196)
+        } else if minutes > 0 {
+            // Level 1 (1~14m): 沉稳深墨绿 #0e4429
+            return Color(red: 0.055, green: 0.267, blue: 0.161)
         } else {
-            return Color.green.opacity(0.28)
+            return level0Color
         }
     }
 }

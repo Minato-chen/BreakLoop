@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 public struct SoundManagerView: View {
     @ObservedObject var engine: TimerEngine
     @ObservedObject var soundManager = SoundManager.shared
+    @State private var hasAppliedToAll: Bool = false
     
     public init(engine: TimerEngine) {
         self.engine = engine
@@ -243,6 +244,38 @@ public struct SoundManagerView: View {
                         .help("试听")
                     }
                 }
+                
+                Divider()
+                
+                // 5. 一键应用到全部已有模块
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("覆盖应用到全部已有模块")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("一键将上方选中的专注默认音与休息默认音，覆盖同步到所有方案现存的模块中")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: applyDefaultSoundsToAllBlocks) {
+                        HStack(spacing: 4) {
+                            if hasAppliedToAll {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.green)
+                                Text("已覆盖全部")
+                                    .foregroundColor(.green)
+                            } else {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                Text("应用到全部")
+                            }
+                        }
+                        .font(.caption)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
             }
             .padding(14)
             .background(Color(NSColor.controlBackgroundColor))
@@ -251,6 +284,33 @@ public struct SoundManagerView: View {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 1)
             )
+        }
+    }
+    
+    private func applyDefaultSoundsToAllBlocks() {
+        let workSound = soundManager.defaultWorkSound
+        let restSound = soundManager.defaultRestSound
+        
+        for pIdx in PresetStore.shared.presets.indices {
+            for bIdx in PresetStore.shared.presets[pIdx].blocks.indices {
+                if PresetStore.shared.presets[pIdx].blocks[bIdx].type == .work {
+                    PresetStore.shared.presets[pIdx].blocks[bIdx].soundName = workSound
+                } else {
+                    PresetStore.shared.presets[pIdx].blocks[bIdx].soundName = restSound
+                }
+            }
+        }
+        PresetStore.shared.save()
+        if let current = PresetStore.shared.presets.first(where: { $0.id == engine.preset.id }) {
+            engine.preset = current
+        }
+        withAnimation {
+            hasAppliedToAll = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation {
+                hasAppliedToAll = false
+            }
         }
     }
     

@@ -39,6 +39,7 @@ final class BreakLoopTests: XCTestCase {
         let engine = TimerEngine(
             preset: preset,
             sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
             nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
         )
         
@@ -85,6 +86,7 @@ final class BreakLoopTests: XCTestCase {
         let engine = TimerEngine(
             preset: preset,
             sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
             nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
         )
         
@@ -115,6 +117,7 @@ final class BreakLoopTests: XCTestCase {
         let engine = TimerEngine(
             preset: preset,
             sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
             nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
         )
         
@@ -137,6 +140,7 @@ final class BreakLoopTests: XCTestCase {
         let engine = TimerEngine(
             preset: preset,
             sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
             nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
         )
         
@@ -201,6 +205,7 @@ final class BreakLoopTests: XCTestCase {
         let engine = TimerEngine(
             preset: preset,
             sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
             nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
         )
         engine.onAlertTriggered = { event in
@@ -244,6 +249,7 @@ final class BreakLoopTests: XCTestCase {
         let engine = TimerEngine(
             preset: preset,
             sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
             nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
         )
         
@@ -356,6 +362,7 @@ final class BreakLoopTests: XCTestCase {
         let engine = TimerEngine(
             preset: preset,
             sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
             nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
         )
         

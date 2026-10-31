@@ -2,7 +2,7 @@ import SwiftUI
 
 public enum NavigationSection: String, CaseIterable, Identifiable {
     case dashboard = "专注仪表台"
-    case heatmap = "工休热力图"
+    case heatmap = "专注热力图"
     case presets = "方案管理"
     case sounds = "声音与提醒"
     case shortcuts = "快捷键"

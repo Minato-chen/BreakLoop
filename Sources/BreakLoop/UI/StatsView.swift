@@ -330,7 +330,7 @@ public struct StatsView: View {
             statCard(title: "累计专注", value: TimeFormatter.formatNatural(seconds: Int(totalWork)), icon: "laptopcomputer", color: .blue)
             statCard(title: "累计休息", value: TimeFormatter.formatNatural(seconds: Int(totalRest)), icon: "cup.and.saucer.fill", color: .green)
             statCard(title: "休息轮次", value: "\(restCount) 次", icon: "arrow.triangle.2.circlepath", color: .purple)
-            statCard(title: "工休比例", value: ratio, icon: "scalemass.fill", color: .orange)
+            statCard(title: "专注与休息比", value: ratio, icon: "scalemass.fill", color: .orange)
         }
     }
     
@@ -358,7 +358,7 @@ public struct StatsView: View {
     private var dayTimelineView: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("当日工休时序流水 (24小时)")
+                Text("当日专注与休息时序流水 (24小时)")
                     .font(.headline)
                 Spacer()
                 Text("共 \(allSessionsInRange.count) 条记录")
@@ -422,7 +422,7 @@ public struct StatsView: View {
     private var weekGridView: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("本周 24 小时工休分布矩阵")
+                Text("本周 24 小时专注分布矩阵")
                     .font(.headline)
                 Spacer()
                 Text("横轴 00:00 ~ 23:00")
@@ -773,7 +773,7 @@ public struct StatsView: View {
         
         let savePanel = NSSavePanel()
         savePanel.allowedContentTypes = [.commaSeparatedText]
-        savePanel.nameFieldStringValue = "BreakLoop-工休记录-\(scopeTitle).csv"
+        savePanel.nameFieldStringValue = "BreakLoop-专注记录-\(scopeTitle).csv"
         
         if savePanel.runModal() == .OK, let url = savePanel.url {
             try? csv.write(to: url, atomically: true, encoding: .utf8)

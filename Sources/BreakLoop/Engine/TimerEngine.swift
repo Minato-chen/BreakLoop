@@ -69,15 +69,18 @@ public final class TimerEngine: ObservableObject {
     
     private var tickTimer: Timer?
     private var heartbeatCounter: Int = 0
+    private let userDefaults: UserDefaults
     
     public init(
         preset: Preset? = nil,
         sessionStore: SessionStore = SessionStore(),
+        userDefaults: UserDefaults = .standard,
         nowProvider: @escaping () -> Date = { Date() }
     ) {
         let initialPreset = preset ?? Preset.defaultPresets[0]
         self.preset = initialPreset
         self.sessionStore = sessionStore
+        self.userDefaults = userDefaults
         self.nowProvider = nowProvider
         
         let initialBlock = initialPreset.blocks.first
@@ -85,6 +88,7 @@ public final class TimerEngine: ObservableObject {
         self.targetSeconds = initialDuration
         self.currentSeconds = initialDuration
         
+        loadTodayCompletedCycles()
         sessionStore.recoverUnfinishedSessionIfNeeded()
         refreshTodayStats()
         updateMenuBarText()
@@ -144,7 +148,7 @@ public final class TimerEngine: ObservableObject {
         
         let nextIndex = currentBlockIndex + 1
         if nextIndex >= preset.blocks.count {
-            completedCycles += 1
+            incrementCompletedCycles()
             currentBlockIndex = 0
         } else {
             currentBlockIndex = nextIndex
@@ -388,6 +392,28 @@ public final class TimerEngine: ObservableObject {
         
         todayWorkSeconds = workSec
         todayRestSeconds = restSec
+        loadTodayCompletedCycles()
+    }
+    
+    // MARK: - 今日循环轮次持久化管理（跨预设累加，切换不归零）
+    private var todayDateKey: String {
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
+        return df.string(from: nowProvider())
+    }
+    
+    private var cyclesStorageKey: String {
+        "BreakLoop.CompletedCycles.\(todayDateKey)"
+    }
+    
+    public func loadTodayCompletedCycles() {
+        completedCycles = userDefaults.integer(forKey: cyclesStorageKey)
+    }
+    
+    public func incrementCompletedCycles() {
+        completedCycles += 1
+        userDefaults.set(completedCycles, forKey: cyclesStorageKey)
+        syncToWidget()
     }
     
     public func syncToWidget() {
