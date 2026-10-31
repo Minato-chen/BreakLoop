@@ -17,7 +17,8 @@ let package = Package(
         .executableTarget(
             name: "BreakLoop",
             dependencies: [],
-            path: "Sources/BreakLoop"
+            path: "Sources/BreakLoop",
+            exclude: ["AppIcon.icns"]
         ),
         .testTarget(
             name: "BreakLoopTests",

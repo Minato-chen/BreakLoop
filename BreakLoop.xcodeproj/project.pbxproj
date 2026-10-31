@@ -19,6 +19,7 @@
 		55A9DF94D26635EB6B7AE6FD /* GitHubHeatmapMatrixView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB62C97608A0F2BC678986CA /* GitHubHeatmapMatrixView.swift */; };
 		62A6B412ADFE01CFA35F5B3A /* PipelineFlowCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07EF3C706FD9C716496549E /* PipelineFlowCanvasView.swift */; };
 		62D6FBD0D53EB508E6FA6090 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BC184D1D79B788BB53EF010 /* LaunchAtLogin.swift */; };
+		6E61D3D9D58A765DAA5CC7FE /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = BFD88BE5BBF718DF5C5F6C72 /* AppIcon.icns */; };
 		834D9CFA8CBC9D78CBD68F84 /* HotKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A3C0F6A91B0FB19D28986EA /* HotKeys.swift */; };
 		8BA78EE55CAAD60EEAC5D0CC /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF4A57CCFFD1832182EB043 /* Session.swift */; };
 		8EE601EA301019CFA55C5567 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7DF3E0AEA9D8E4B21C085D80 /* Assets.xcassets */; };
@@ -98,6 +99,7 @@
 		B07EF3C706FD9C716496549E /* PipelineFlowCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipelineFlowCanvasView.swift; sourceTree = "<group>"; };
 		B5A10F7B19186F85B44E0380 /* BreakLoop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BreakLoop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB62C97608A0F2BC678986CA /* GitHubHeatmapMatrixView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubHeatmapMatrixView.swift; sourceTree = "<group>"; };
+		BFD88BE5BBF718DF5C5F6C72 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		D3F2120EDED93B12388AA584 /* MainAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainAppView.swift; sourceTree = "<group>"; };
 		D9EE61B1F19105F714B2560F /* MenuBarContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContent.swift; sourceTree = "<group>"; };
 		F461811D315F9F467BDEAF10 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
@@ -128,6 +130,7 @@
 		4BB5341985415FEE60ED1A6F /* BreakLoop */ = {
 			isa = PBXGroup;
 			children = (
+				BFD88BE5BBF718DF5C5F6C72 /* AppIcon.icns */,
 				7DF3E0AEA9D8E4B21C085D80 /* Assets.xcassets */,
 				621B875E15358E00CC041022 /* BreakLoop.swift */,
 				A629CCAFD45A0B7265DBDE16 /* Engine */,
@@ -302,6 +305,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6E61D3D9D58A765DAA5CC7FE /* AppIcon.icns in Resources */,
 				8EE601EA301019CFA55C5567 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

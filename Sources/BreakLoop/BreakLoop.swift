@@ -11,6 +11,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // 标准 App 策略：有 Dock 图标，支持主窗口
         NSApp.setActivationPolicy(.regular)
         
+        // 0. 刷新应用图标 (确保 Dock 与运行态图标即刻生效苹果风双弧呼吸环)
+        if let iconImage = NSImage(named: "AppIcon") {
+            NSApplication.shared.applicationIconImage = iconImage
+        }
+        
         // 1. 绑定到点提醒
         engine.onAlertTriggered = { [weak self] event in
             guard let self = self else { return }
