@@ -83,11 +83,11 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
     public var name: String
     public var durationMinutes: Int        // 倒计时时长（分），或正计时的预计/参考分钟
     public var timingMode: BlockTimingMode // 倒计时 / 正计时
-    public var targetSeconds: Int?         // 正计时达标轻提示秒数（例如 20s）
-    public var soundName: String           // 结束提示音
-    public var message: String             // 提示文案，如 "看远方 20 秒", "闭目养神"
-    public var autoAdvance: Bool           // 结束后是否自动推进到下一块
-    public var snoozeMinutes: Int          // 稍后提醒延时时长（默认 5 分钟）
+    public var targetSeconds: Int? = nil         // 正计时达标轻提示秒数（例如 20s）
+    public var soundName: String = "Glass"           // 结束提示音
+    public var message: String = ""             // 提示文案，如 "看远方 20 秒", "闭目养神"
+    public var autoAdvance: Bool = true           // 结束后是否自动推进到下一块
+    public var snoozeMinutes: Int = 5          // 稍后提醒延时时长（默认 5 分钟）
     
     public init(
         id: UUID = UUID(),
@@ -185,14 +185,14 @@ public struct Preset: Codable, Identifiable, Equatable {
     public var blocks: [FlowBlock]
     
     // 全局安全兜底与空闲
-    public var restMaxMinutes: Int            // 休息超上限强制进待机
-    public var idleMinutes: Int               // 键鼠空闲超时进待机
-    public var alertStyle: AlertStyle
-    public var rotation: [RotationRule]
+    public var restMaxMinutes: Int = 30            // 休息超上限强制进待机
+    public var idleMinutes: Int = 10               // 键鼠空闲超时进待机
+    public var alertStyle: AlertStyle = .both
+    public var rotation: [RotationRule] = []
     
     // 中断恢复策略（手动待机 vs 被动待机）
-    public var manualStandbyRecovery: InterruptRecovery
-    public var passiveStandbyRecovery: InterruptRecovery
+    public var manualStandbyRecovery: InterruptRecovery = .resetCurrent
+    public var passiveStandbyRecovery: InterruptRecovery = .resetCurrent
     
     // 兼容历史字段
     public var mode: FlowMode {
