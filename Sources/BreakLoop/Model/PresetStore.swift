@@ -71,7 +71,7 @@ public final class PresetStore: ObservableObject {
     
     public func addPreset(_ preset: Preset) {
         presets.append(preset)
-        activePresetId = preset.id
+        // 不自动替换 activePresetId，保持当前默认方案不变
         save()
     }
     

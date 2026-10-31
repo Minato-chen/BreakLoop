@@ -41,6 +41,9 @@ public struct PresetManagerView: View {
                 
                 List(selection: $selectedPresetId) {
                     ForEach(presetStore.presets) { preset in
+                        let isRunning = (engine.mode != .standby && engine.preset.id == preset.id)
+                        let isDefault = (presetStore.activePresetId == preset.id)
+                        
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(preset.name)
@@ -49,12 +52,32 @@ public struct PresetManagerView: View {
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
+                            
                             Spacer()
-                            // 打勾标记：代表当前设为默认（下轮执行）的方案
-                            if presetStore.activePresetId == preset.id {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.accentColor)
-                                    .font(.caption)
+                            
+                            if isRunning {
+                                HStack(spacing: 3) {
+                                    Circle().fill(Color.green).frame(width: 5, height: 5)
+                                    Text("运行中")
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundColor(.green)
+                                }
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.green.opacity(0.12))
+                                .clipShape(Capsule())
+                            } else if isDefault {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 9, weight: .bold))
+                                    Text("默认")
+                                        .font(.system(size: 10, weight: .medium))
+                                }
+                                .foregroundColor(.accentColor)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.accentColor.opacity(0.12))
+                                .clipShape(Capsule())
                             }
                         }
                         .tag(preset.id)

@@ -572,17 +572,20 @@ public struct PipelineFlowCanvasView: View {
                             
                             Spacer()
                             
-                            HStack(spacing: 6) {
-                                Text("稍后提醒:")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Picker("", selection: binding(for: index).snoozeMinutes) {
-                                    Text("3 分钟").tag(3)
-                                    Text("5 分钟 (默认)").tag(5)
-                                    Text("10 分钟").tag(10)
+                            // 稍后提醒（仅固定倒计时有效；自由正计时无固定终点自然流动，无需稍后提醒）
+                            if block.timingMode == .countdown {
+                                HStack(spacing: 6) {
+                                    Text("稍后提醒:")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Picker("", selection: binding(for: index).snoozeMinutes) {
+                                        Text("3 分钟").tag(3)
+                                        Text("5 分钟 (默认)").tag(5)
+                                        Text("10 分钟").tag(10)
+                                    }
+                                    .pickerStyle(.menu)
+                                    .frame(width: 110)
                                 }
-                                .pickerStyle(.menu)
-                                .frame(width: 110)
                             }
                         }
                         
