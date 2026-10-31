@@ -2,11 +2,14 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-/// 独立顶级大类：声音中心（全套声音管理、自定义音频导入、多轮重复与长音末尾平滑渐弱截断）
+/// 独立顶级大类：声音与提醒中心（全套声音管理、自定义音频导入、到点提醒形式、多轮重复与长音末尾平滑渐弱截断）
 public struct SoundManagerView: View {
+    @ObservedObject var engine: TimerEngine
     @ObservedObject var soundManager = SoundManager.shared
     
-    public init() {}
+    public init(engine: TimerEngine) {
+        self.engine = engine
+    }
     
     public var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
@@ -16,17 +19,22 @@ public struct SoundManagerView: View {
                 
                 Divider()
                 
-                // 1. 全局提示策略（重复次数、截断保护、音量）
+                // 1. 全局提醒形式（弹窗与声音 / 仅声音 / 仅弹窗 / 静音）
+                alertStyleSection
+                
+                Divider()
+                
+                // 2. 全局提示策略（重复次数、截断保护、音量）
                 strategySection
                 
                 Divider()
                 
-                // 2. 自定义音频管理库
+                // 3. 自定义音频管理库
                 customSoundsSection
                 
                 Divider()
                 
-                // 3. 系统内置声音库
+                // 4. 系统内置声音库
                 builtinSoundsSection
             }
             .padding(24)
@@ -44,9 +52,9 @@ public struct SoundManagerView: View {
                 .foregroundColor(.accentColor)
             
             VStack(alignment: .leading, spacing: 3) {
-                Text("声音中心")
+                Text("声音与提醒")
                     .font(.system(size: 18, weight: .bold))
-                Text("配置提醒音效、导入个人音频、设定重复多轮警示与长音平滑渐弱保护")
+                Text("配置工休提醒形式、设定提示音效、导入个人音频与长音平滑渐弱截断保护")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -65,6 +73,42 @@ public struct SoundManagerView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
             }
+        }
+    }
+    
+    // MARK: - 提醒形式卡片（融入声音与提醒中心）
+    private var alertStyleSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("提醒形式")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.primary)
+            
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("到点提醒形式")
+                        .font(.system(size: 13, weight: .medium))
+                    Text("控制工休切换时的交互行为（支持弹窗与声音、仅声音、仅弹窗或完全静音）")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Picker("", selection: $engine.preset.alertStyle) {
+                    Text("弹窗与声音").tag(AlertStyle.both)
+                    Text("仅声音").tag(AlertStyle.sound)
+                    Text("仅弹窗").tag(AlertStyle.popup)
+                    Text("静音").tag(AlertStyle.none)
+                }
+                .pickerStyle(.menu)
+                .frame(width: 140)
+                .onChange(of: engine.preset.alertStyle) { _ in
+                    PresetStore.shared.activePreset = engine.preset
+                }
+            }
+            .padding(14)
+            .background(Color(NSColor.controlBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
     }
     

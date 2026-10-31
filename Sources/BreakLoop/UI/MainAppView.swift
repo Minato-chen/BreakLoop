@@ -4,7 +4,8 @@ public enum NavigationSection: String, CaseIterable, Identifiable {
     case dashboard = "专注仪表台"
     case heatmap = "工休热力图"
     case presets = "方案管理"
-    case sounds = "声音中心"
+    case sounds = "声音与提醒"
+    case shortcuts = "快捷键"
     case preferences = "偏好设置"
     case about = "关于"
     
@@ -16,6 +17,7 @@ public enum NavigationSection: String, CaseIterable, Identifiable {
         case .heatmap: return "chart.bar.xaxis"
         case .presets: return "arrow.triangle.2.circlepath"
         case .sounds: return "speaker.wave.3.fill"
+        case .shortcuts: return "keyboard"
         case .preferences: return "gearshape"
         case .about: return "info.circle"
         }
@@ -92,7 +94,9 @@ public struct MainAppView: View {
                 case .presets:
                     PresetManagerView(engine: engine)
                 case .sounds:
-                    SoundManagerView()
+                    SoundManagerView(engine: engine)
+                case .shortcuts:
+                    ShortcutsView()
                 case .preferences:
                     GeneralPreferencesView(engine: engine)
                 case .about:

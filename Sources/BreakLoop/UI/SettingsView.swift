@@ -169,7 +169,7 @@ public struct SettingsView: View {
     }
 }
 
-/// 通用偏好设置
+/// 通用偏好设置（极简精简，已将声音提醒与快捷键拆分为独立大类）
 public struct GeneralPreferencesView: View {
     @ObservedObject var engine: TimerEngine
     @AppStorage("BreakLoop.LaunchAtLogin") private var launchAtLogin: Bool = false
@@ -191,29 +191,6 @@ public struct GeneralPreferencesView: View {
             } header: {
                 Text("常规").font(.headline)
             }
-            
-            Section {
-                Picker("提醒形式", selection: $engine.preset.alertStyle) {
-                    Text("弹窗与声音").tag(AlertStyle.both)
-                    Text("仅弹窗").tag(AlertStyle.popup)
-                    Text("仅声音").tag(AlertStyle.sound)
-                    Text("静音").tag(AlertStyle.none)
-                }
-            } header: {
-                Text("提醒").font(.headline)
-            }
-            
-            Section {
-                Text("快捷键快速操作：")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Text("• ⌥ + Space: 快速切换工作 / 休息")
-                    .font(.caption2)
-                Text("• ⌥ + ⎋ (Escape): 随时挂起跳出并进入待机")
-                    .font(.caption2)
-            } header: {
-                Text("快捷键").font(.headline)
-            }
         }
         .formStyle(.grouped)
         .padding(24)
@@ -221,32 +198,221 @@ public struct GeneralPreferencesView: View {
     }
 }
 
-/// 关于视图
+/// 关于视图（包含 GitHub 仓库、检查更新与自动更新）
 public struct AboutView: View {
+    @ObservedObject var updater = UpdateChecker.shared
+    @AppStorage("BreakLoop.AutoCheckUpdate") private var autoCheckUpdate: Bool = true
+    
     public init() {}
     
     public var body: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            
-            Image(systemName: "circle.circle.fill")
-                .font(.system(size: 54))
-                .foregroundColor(.accentColor)
-            
-            Text("BreakLoop")
-                .font(.system(size: 20, weight: .bold))
-            
-            Text("极简模块化专注循环引擎")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Text("v2.0 (Low Memory & CPU Optimized)")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-            
-            Spacer()
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(spacing: 20) {
+                // 顶部应用标志
+                VStack(spacing: 8) {
+                    Image(systemName: "circle.circle.fill")
+                        .font(.system(size: 56))
+                        .foregroundColor(.accentColor)
+                    
+                    Text("BreakLoop")
+                        .font(.system(size: 22, weight: .bold))
+                    
+                    Text("极简模块化专注循环引擎")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    HStack(spacing: 6) {
+                        Text("版本 \(updater.currentVersion)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.accentColor.opacity(0.12))
+                            .foregroundColor(.accentColor)
+                            .clipShape(Capsule())
+                        
+                        Text("低能耗极致优化")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.top, 16)
+                
+                Divider()
+                    .frame(maxWidth: 520)
+                
+                // GitHub 仓库卡片
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "link.circle.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.accentColor)
+                        Text("开源项目与社区")
+                            .font(.system(size: 13, weight: .bold))
+                        Spacer()
+                    }
+                    
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("GitHub 仓库")
+                                .font(.system(size: 13, weight: .medium))
+                            Text("https://github.com/Minato-chen/BreakLoop")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Button(action: {
+                            NSWorkspace.shared.open(updater.repoURL)
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.up.right.square")
+                                Text("访问 GitHub")
+                            }
+                            .font(.caption)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: 520)
+                .background(Color(NSColor.controlBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                
+                // 检查更新 & 自动更新卡片
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.accentColor)
+                        Text("软件更新")
+                            .font(.system(size: 13, weight: .bold))
+                        Spacer()
+                    }
+                    
+                    // 自动检查更新开关
+                    Toggle(isOn: $autoCheckUpdate) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("自动检查更新")
+                                .font(.system(size: 13, weight: .medium))
+                            Text("应用启动时自动静默检查 GitHub Releases 最新版本")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                    
+                    Divider()
+                    
+                    // 手动检查更新操作行
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("当前版本检查")
+                                .font(.system(size: 13, weight: .medium))
+                            
+                            switch updater.status {
+                            case .idle:
+                                if let date = updater.lastCheckTime {
+                                    Text("上次检查：\(dateFormatted(date))")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                } else {
+                                    Text("尚未进行版本检查")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            case .checking:
+                                HStack(spacing: 6) {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                    Text("正在连接 GitHub 检查最新发布...")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            case .upToDate(let version):
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                    Text("当前已是最新版本 (v\(version))")
+                                        .foregroundColor(.green)
+                                }
+                                .font(.caption2)
+                            case .newVersionAvailable(let version, _, _):
+                                HStack(spacing: 4) {
+                                    Image(systemName: "exclamationmark.circle.fill")
+                                        .foregroundColor(.orange)
+                                    Text("发现新版本 \(version)")
+                                        .foregroundColor(.orange)
+                                        .fontWeight(.semibold)
+                                }
+                                .font(.caption2)
+                            case .failed(let msg):
+                                HStack(spacing: 4) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.red)
+                                    Text(msg)
+                                        .foregroundColor(.red)
+                                }
+                                .font(.caption2)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        if case .newVersionAvailable(_, _, let downloadURL) = updater.status {
+                            Button(action: {
+                                NSWorkspace.shared.open(downloadURL)
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.down.circle.fill")
+                                    Text("前往下载")
+                                }
+                                .font(.caption)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                        } else {
+                            Button(action: {
+                                updater.checkForUpdates(isUserInitiated: true)
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.clockwise")
+                                    Text("检查更新")
+                                }
+                                .font(.caption)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(updater.status == .checking)
+                        }
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: 520)
+                .background(Color(NSColor.controlBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                
+                // 底部版权信息
+                VStack(spacing: 4) {
+                    Text("BreakLoop 遵循 MIT 开源协议发布")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Text("Designed with care for ergonomics and deep focus.")
+                        .font(.caption2)
+                        .foregroundColor(.secondary.opacity(0.8))
+                }
+                .padding(.top, 10)
+                .padding(.bottom, 20)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
+        .background(Color(NSColor.windowBackgroundColor).opacity(0.4))
+    }
+    
+    private func dateFormatted(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter.string(from: date)
     }
 }

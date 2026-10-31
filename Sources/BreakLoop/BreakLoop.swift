@@ -47,7 +47,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         HotKeyManager.shared.registerDefaultHotKeys()
         
-        // 4. 启动默认打开主窗口
+        // 4. 自动检查软件版本更新（若开启）
+        if UserDefaults.standard.object(forKey: "BreakLoop.AutoCheckUpdate") == nil || UserDefaults.standard.bool(forKey: "BreakLoop.AutoCheckUpdate") {
+            UpdateChecker.shared.checkForUpdates(isUserInitiated: false)
+        }
+        
+        // 5. 启动默认打开主窗口
         showMainWindow()
     }
     
