@@ -21,6 +21,7 @@
 		62D6FBD0D53EB508E6FA6090 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BC184D1D79B788BB53EF010 /* LaunchAtLogin.swift */; };
 		6E61D3D9D58A765DAA5CC7FE /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = BFD88BE5BBF718DF5C5F6C72 /* AppIcon.icns */; };
 		834D9CFA8CBC9D78CBD68F84 /* HotKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A3C0F6A91B0FB19D28986EA /* HotKeys.swift */; };
+		880B633DE5FACFCEA8847EA3 /* DualArcRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C35EB38EC455EE3C1D7367A8 /* DualArcRingView.swift */; };
 		8BA78EE55CAAD60EEAC5D0CC /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF4A57CCFFD1832182EB043 /* Session.swift */; };
 		8EE601EA301019CFA55C5567 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7DF3E0AEA9D8E4B21C085D80 /* Assets.xcassets */; };
 		98A1E894465D89578D6C03AE /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91B8C9FD9DAFF78A8BFFB397 /* SettingsView.swift */; };
@@ -100,6 +101,7 @@
 		B5A10F7B19186F85B44E0380 /* BreakLoop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BreakLoop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB62C97608A0F2BC678986CA /* GitHubHeatmapMatrixView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubHeatmapMatrixView.swift; sourceTree = "<group>"; };
 		BFD88BE5BBF718DF5C5F6C72 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		C35EB38EC455EE3C1D7367A8 /* DualArcRingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualArcRingView.swift; sourceTree = "<group>"; };
 		D3F2120EDED93B12388AA584 /* MainAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainAppView.swift; sourceTree = "<group>"; };
 		D9EE61B1F19105F714B2560F /* MenuBarContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContent.swift; sourceTree = "<group>"; };
 		F461811D315F9F467BDEAF10 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
@@ -180,6 +182,7 @@
 			children = (
 				4A90AF519E667C44493E35F2 /* BrandLogoView.swift */,
 				0D55174B05A163C7AB0C66CB /* DashboardView.swift */,
+				C35EB38EC455EE3C1D7367A8 /* DualArcRingView.swift */,
 				BB62C97608A0F2BC678986CA /* GitHubHeatmapMatrixView.swift */,
 				D3F2120EDED93B12388AA584 /* MainAppView.swift */,
 				D9EE61B1F19105F714B2560F /* MenuBarContent.swift */,
@@ -330,6 +333,7 @@
 				1AD32C1C746DCD7B56C11B93 /* BrandLogoView.swift in Sources */,
 				29B55473F67A46F7D8A0EF01 /* BreakLoop.swift in Sources */,
 				4DDFF9026F5F3354914E0157 /* DashboardView.swift in Sources */,
+				880B633DE5FACFCEA8847EA3 /* DualArcRingView.swift in Sources */,
 				55A9DF94D26635EB6B7AE6FD /* GitHubHeatmapMatrixView.swift in Sources */,
 				834D9CFA8CBC9D78CBD68F84 /* HotKeys.swift in Sources */,
 				E0517924B5D11210D77D37EF /* IdleMonitor.swift in Sources */,

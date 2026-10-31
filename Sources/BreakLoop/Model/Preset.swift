@@ -34,6 +34,21 @@ public enum AlertStyle: String, Codable, CaseIterable {
     case none    // 无提示（静音）
 }
 
+/// 打断恢复策略（支持针对手动待机与被动待机自定义恢复行为）
+public enum InterruptRecovery: String, Codable, CaseIterable {
+    case resetCurrent = "resetCurrent"   // 从本步满额重新开始（推荐）
+    case resume = "resume"               // 断点续传（继续剩余时间）
+    case resetCycle = "resetCycle"       // 重置大循环（回第 1 步）
+    
+    public var displayName: String {
+        switch self {
+        case .resetCurrent: return "重置本步（重新倒数）"
+        case .resume: return "断点续传（继续剩余时间）"
+        case .resetCycle: return "重置整轮（回到第1步）"
+        }
+    }
+}
+
 /// 休息计时方式（保留兼容）
 public enum RestTimingMode: String, Codable, CaseIterable {
     case stopwatch  // 正计时
@@ -175,6 +190,10 @@ public struct Preset: Codable, Identifiable, Equatable {
     public var alertStyle: AlertStyle
     public var rotation: [RotationRule]
     
+    // 中断恢复策略（手动待机 vs 被动待机）
+    public var manualStandbyRecovery: InterruptRecovery
+    public var passiveStandbyRecovery: InterruptRecovery
+    
     // 兼容历史字段
     public var mode: FlowMode {
         get { .custom }
@@ -272,7 +291,9 @@ public struct Preset: Codable, Identifiable, Equatable {
         restMaxMinutes: Int = 30,
         idleMinutes: Int = 10,
         alertStyle: AlertStyle = .both,
-        rotation: [RotationRule] = []
+        rotation: [RotationRule] = [],
+        manualStandbyRecovery: InterruptRecovery = .resetCurrent,
+        passiveStandbyRecovery: InterruptRecovery = .resetCurrent
     ) {
         self.id = id
         self.name = name
@@ -281,6 +302,8 @@ public struct Preset: Codable, Identifiable, Equatable {
         self.idleMinutes = idleMinutes
         self.alertStyle = alertStyle
         self.rotation = rotation
+        self.manualStandbyRecovery = manualStandbyRecovery
+        self.passiveStandbyRecovery = passiveStandbyRecovery
     }
     
     // 兼容历史旧构造器
@@ -309,6 +332,8 @@ public struct Preset: Codable, Identifiable, Equatable {
         self.idleMinutes = idleMinutes
         self.alertStyle = alertStyle
         self.rotation = rotation
+        self.manualStandbyRecovery = .resetCurrent
+        self.passiveStandbyRecovery = .resetCurrent
         
         // 自动转换成流水线模块
         if mode == .pomodoro {
@@ -339,6 +364,7 @@ public struct Preset: Codable, Identifiable, Equatable {
     // MARK: - Codable 兼容解码
     enum CodingKeys: String, CodingKey {
         case id, name, blocks, restMaxMinutes, idleMinutes, alertStyle, rotation
+        case manualStandbyRecovery, passiveStandbyRecovery
         // 旧字段
         case workMinutes, restTimingMode, restTargetSeconds, restMinutes, longRestMinutes, longRestInterval, soundName, message
     }
@@ -351,6 +377,8 @@ public struct Preset: Codable, Identifiable, Equatable {
         self.idleMinutes = try container.decodeIfPresent(Int.self, forKey: .idleMinutes) ?? 10
         self.alertStyle = try container.decodeIfPresent(AlertStyle.self, forKey: .alertStyle) ?? .both
         self.rotation = try container.decodeIfPresent([RotationRule].self, forKey: .rotation) ?? []
+        self.manualStandbyRecovery = try container.decodeIfPresent(InterruptRecovery.self, forKey: .manualStandbyRecovery) ?? .resetCurrent
+        self.passiveStandbyRecovery = try container.decodeIfPresent(InterruptRecovery.self, forKey: .passiveStandbyRecovery) ?? .resetCurrent
         
         if let decodedBlocks = try container.decodeIfPresent([FlowBlock].self, forKey: .blocks), !decodedBlocks.isEmpty {
             self.blocks = decodedBlocks
@@ -385,6 +413,8 @@ public struct Preset: Codable, Identifiable, Equatable {
         try container.encode(idleMinutes, forKey: .idleMinutes)
         try container.encode(alertStyle, forKey: .alertStyle)
         try container.encode(rotation, forKey: .rotation)
+        try container.encode(manualStandbyRecovery, forKey: .manualStandbyRecovery)
+        try container.encode(passiveStandbyRecovery, forKey: .passiveStandbyRecovery)
     }
     
     // MARK: - 三大标准预设模板

@@ -25,6 +25,12 @@ public final class TimerEngine: ObservableObject {
     @Published public private(set) var completedCycles: Int = 0      // 已完成大循环轮次
     @Published public private(set) var currentBlockIndex: Int = 0    // 当前流水线步数 (0-based)
     @Published public private(set) var isLongRest: Bool = false      // 长休息标记
+    @Published public private(set) var isPaused: Bool = false        // 暂停状态标记
+    
+    public private(set) var pauseStartTime: Date?
+    public private(set) var remainingSecondsOnPause: Int?
+    public private(set) var lastStandbyReason: EndReason?
+    public private(set) var savedRemainingSeconds: Int?
     
     // 专门供给菜单栏的高效低频分钟显示（仅在分钟变化时触发 UI 重绘，彻底消除 CPU 占用）
     @Published public private(set) var menuBarText: String = ""
@@ -98,11 +104,74 @@ public final class TimerEngine: ObservableObject {
         stopTimers()
     }
     
+    // MARK: - 暂停与继续控制
+    public func togglePause() {
+        if isPaused {
+            resume()
+        } else {
+            pause()
+        }
+    }
+    
+    public func pause() {
+        guard mode != .standby, !isPaused else { return }
+        isPaused = true
+        let now = nowProvider()
+        pauseStartTime = now
+        remainingSecondsOnPause = currentSeconds
+        updateMenuBarText()
+        syncToWidget()
+    }
+    
+    public func resume() {
+        guard isPaused else { return }
+        let now = nowProvider()
+        let pauseDuration = now.timeIntervalSince(pauseStartTime ?? now)
+        if let start = sessionStartDate {
+            sessionStartDate = start.addingTimeInterval(pauseDuration)
+        }
+        if let remaining = remainingSecondsOnPause {
+            currentSeconds = remaining
+            if mode == .working || (currentBlock?.timingMode == .countdown) {
+                targetEndDate = now.addingTimeInterval(TimeInterval(remaining))
+            }
+        }
+        isPaused = false
+        pauseStartTime = nil
+        remainingSecondsOnPause = nil
+        updateMenuBarText()
+        syncToWidget()
+    }
+    
+    public func resetCycleToBeginning() {
+        currentBlockIndex = 0
+        savedRemainingSeconds = nil
+        resetToCurrentBlock()
+        updateMenuBarText()
+        syncToWidget()
+    }
+    
     // MARK: - 状态流转
     
     public func startCurrentBlock() {
         guard let block = currentBlock else { return }
         let now = nowProvider()
+        
+        let wasInStandby = (mode == .standby)
+        var shouldResumeSavedSeconds = false
+        if wasInStandby {
+            let recovery = (lastStandbyReason == .manual) ? preset.manualStandbyRecovery : preset.passiveStandbyRecovery
+            switch recovery {
+            case .resume:
+                if let saved = savedRemainingSeconds, saved > 0 {
+                    shouldResumeSavedSeconds = true
+                }
+            case .resetCycle:
+                currentBlockIndex = 0
+            case .resetCurrent:
+                break
+            }
+        }
         
         if mode != .standby {
             closeCurrentSession(endedAt: now, reason: .completed)
@@ -111,28 +180,42 @@ public final class TimerEngine: ObservableObject {
         sessionStartDate = now
         hasTriggeredSoftTarget = false
         lastRecordedMinute = -1
+        isPaused = false
+        pauseStartTime = nil
+        remainingSecondsOnPause = nil
         
         switch block.type {
         case .work:
             mode = .working
             isLongRest = false
             targetSeconds = max(1, block.durationMinutes) * 60
-            currentSeconds = targetSeconds
-            targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
+            if shouldResumeSavedSeconds, let saved = savedRemainingSeconds {
+                currentSeconds = saved
+                targetEndDate = now.addingTimeInterval(TimeInterval(saved))
+            } else {
+                currentSeconds = targetSeconds
+                targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
+            }
             
         case .rest:
             mode = .resting
             isLongRest = (block.durationMinutes >= 15)
             if block.timingMode == .countdown {
                 targetSeconds = max(1, block.durationMinutes) * 60
-                currentSeconds = targetSeconds
-                targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
+                if shouldResumeSavedSeconds, let saved = savedRemainingSeconds {
+                    currentSeconds = saved
+                    targetEndDate = now.addingTimeInterval(TimeInterval(saved))
+                } else {
+                    currentSeconds = targetSeconds
+                    targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
+                }
             } else {
                 targetSeconds = block.targetSeconds ?? (block.durationMinutes * 60)
-                currentSeconds = 0
+                currentSeconds = shouldResumeSavedSeconds ? (savedRemainingSeconds ?? 0) : 0
                 targetEndDate = nil
             }
         }
+        savedRemainingSeconds = nil
         
         startTimer()
         recordInitialSession()
@@ -166,6 +249,12 @@ public final class TimerEngine: ObservableObject {
     public func enterStandby(reason: EndReason = .manual, at time: Date? = nil) {
         guard mode != .standby else { return }
         let endAt = time ?? nowProvider()
+        
+        lastStandbyReason = reason
+        savedRemainingSeconds = isPaused ? (remainingSecondsOnPause ?? currentSeconds) : currentSeconds
+        isPaused = false
+        pauseStartTime = nil
+        remainingSecondsOnPause = nil
         
         closeCurrentSession(endedAt: endAt, reason: reason)
         stopTimers()
@@ -237,6 +326,11 @@ public final class TimerEngine: ObservableObject {
         let total = max(1, preset.blocks.count)
         let step = currentBlockIndex + 1
         
+        if isPaused {
+            menuBarText = "\(step)/\(total) 暂停中"
+            return
+        }
+        
         switch mode {
         case .standby:
             menuBarText = "\(total)步"
@@ -258,6 +352,18 @@ public final class TimerEngine: ObservableObject {
     public func tick() {
         guard mode != .standby, let block = currentBlock else { return }
         let now = nowProvider()
+        
+        // 暂停状态防遗忘检查（超时自动转入待机并回溯）
+        if isPaused {
+            let timeoutMins = userDefaults.object(forKey: "BreakLoop.PauseTimeoutMinutes") as? Int ?? 5
+            if timeoutMins > 0, let pStart = pauseStartTime {
+                let elapsed = now.timeIntervalSince(pStart)
+                if elapsed >= Double(timeoutMins * 60) {
+                    enterStandby(reason: .idle, at: pStart)
+                }
+            }
+            return
+        }
         
         // 心跳维护：每 30 秒仅轻量更新时间戳，绝不做昂贵 JSON 编码
         heartbeatCounter += 1

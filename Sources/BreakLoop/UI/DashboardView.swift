@@ -250,8 +250,35 @@ public struct DashboardView: View {
                         }
                         .buttonStyle(.plain)
                         .help("立即开启休息流程")
+                        
+                        if engine.currentBlockIndex > 0 {
+                            Button(action: { engine.resetCycleToBeginning() }) {
+                                Image(systemName: "arrow.counterclockwise")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 40, height: 42)
+                                    .background(Color(NSColor.controlBackgroundColor))
+                                    .clipShape(Circle())
+                            }
+                            .buttonStyle(.plain)
+                            .help("重置整轮大循环（回到第 1 步）")
+                        }
                     }
                 }
+            }
+            
+            // 暂停/继续控制
+            if engine.mode != .standby {
+                Button(action: { engine.togglePause() }) {
+                    Image(systemName: engine.isPaused ? "play.fill" : "pause.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(engine.isPaused ? .orange : .primary)
+                        .frame(width: 40, height: 42)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help(engine.isPaused ? "继续计时" : "临时暂停（超时自动转待机并回溯）")
             }
             
             // 跳过本步
@@ -323,6 +350,10 @@ public struct DashboardView: View {
         let total = max(1, engine.preset.blocks.count)
         let step = engine.currentBlockIndex + 1
         
+        if engine.isPaused {
+            return "[\(step)/\(total)] \(blockName) · 暂停中"
+        }
+        
         switch engine.mode {
         case .working:
             return "[\(step)/\(total)] \(blockName)"
@@ -334,6 +365,7 @@ public struct DashboardView: View {
     }
     
     private var mainSymbol: String {
+        if engine.isPaused { return "pause.circle.fill" }
         guard let block = engine.currentBlock else { return "leaf.fill" }
         switch engine.mode {
         case .working: return "laptopcomputer"
@@ -344,6 +376,7 @@ public struct DashboardView: View {
     }
     
     private var themeColor: Color {
+        if engine.isPaused { return .orange }
         guard let block = engine.currentBlock else { return .accentColor }
         switch engine.mode {
         case .working: return .blue

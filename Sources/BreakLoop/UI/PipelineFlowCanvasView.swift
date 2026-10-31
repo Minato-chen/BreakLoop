@@ -76,6 +76,9 @@ public struct PipelineFlowCanvasView: View {
                         
                         // 结尾指向从头循环
                         loopBackDestinationNode
+                        
+                        // 打断恢复策略
+                        interruptRecoverySection
                     }
                     .frame(maxWidth: 460)
                     .padding(.horizontal, 16)
@@ -123,21 +126,95 @@ public struct PipelineFlowCanvasView: View {
                     .controlSize(.small)
                 }
             } else {
-                Button(action: {
-                    engine.preset = preset
-                    engine.startCurrentBlock()
-                }) {
-                    Label("启动此方案", systemImage: "play.fill")
+                HStack(spacing: 8) {
+                    let isDefault = (PresetStore.shared.activePresetId == preset.id)
+                    Button(action: {
+                        PresetStore.shared.activePresetId = preset.id
+                        if engine.mode == .standby {
+                            engine.preset = preset
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            if isDefault {
+                                Image(systemName: "checkmark")
+                            }
+                            Text(isDefault ? "已设为下轮默认" : "应用为下轮默认")
+                        }
                         .font(.caption)
-                        .fontWeight(.medium)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(isDefault)
+                    .help(isDefault ? "当前循环结束后将自动执行此方案" : "点击设为下轮默认方案（不打断当前计时）")
+                    
+                    Button(action: {
+                        PresetStore.shared.activePresetId = preset.id
+                        engine.preset = preset
+                        engine.resetCycleToBeginning()
+                        engine.startCurrentBlock()
+                    }) {
+                        Label("立即启用", systemImage: "play.fill")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .help("立即结束当前进度，切换到此方案并从头开始")
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(Color(NSColor.controlBackgroundColor))
+    }
+    
+    // MARK: - 方案专属打断恢复策略配置
+    private var interruptRecoverySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                    .foregroundColor(.accentColor)
+                    .font(.caption)
+                Text("打断恢复策略（本方案专有）")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+            }
+            
+            VStack(spacing: 6) {
+                HStack {
+                    Text("手动待机后恢复:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Picker("", selection: $preset.manualStandbyRecovery) {
+                        ForEach(InterruptRecovery.allCases, id: \.self) { r in
+                            Text(r.displayName).tag(r)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 170)
+                }
+                
+                HStack {
+                    Text("屏保/离开后恢复:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Picker("", selection: $preset.passiveStandbyRecovery) {
+                        ForEach(InterruptRecovery.allCases, id: \.self) { r in
+                            Text(r.displayName).tag(r)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 170)
+                }
+            }
+            .padding(10)
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(8)
+        }
+        .padding(.top, 16)
     }
     
     // MARK: - 循环起点微标（与从头循环采用一致的精致半透胶囊样式）

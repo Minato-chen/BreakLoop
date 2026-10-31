@@ -52,6 +52,10 @@ public struct MenuBarContent: View {
             
             // 运行中的流转控制
             if engine.mode != .standby {
+                Button(action: { engine.togglePause() }) {
+                    Label(engine.isPaused ? "继续计时" : "临时暂停", systemImage: engine.isPaused ? "play.fill" : "pause.fill")
+                }
+                
                 Button(action: { engine.advanceToNextBlock() }) {
                     Label("跳过本步", systemImage: "forward.fill")
                 }

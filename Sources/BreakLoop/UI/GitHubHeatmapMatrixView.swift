@@ -87,10 +87,15 @@ public struct GitHubHeatmapMatrixView: View {
                         Text("\(hover.day.weekdayName) \(hover.day.dateString) \(String(format: "%02d:00", hover.hour.hour))")
                             .fontWeight(.semibold)
                         Text("💻 专注: \(hover.hour.workMinutes)m")
-                            .foregroundColor(gitHubGreen(minutes: hover.hour.workMinutes))
+                            .foregroundColor(Color(red: 0.05, green: 0.52, blue: 1.0))
                         if hover.hour.restMinutes > 0 {
                             Text("☕️ 休息: \(hover.hour.restMinutes)m")
-                                .foregroundColor(restBadgeColor)
+                                .foregroundColor(Color(red: 0.18, green: 0.82, blue: 0.38))
+                        }
+                        if hover.hour.restMinutes > 0 && hover.hour.workMinutes > 0 {
+                            let ratio = Double(hover.hour.workMinutes) / Double(hover.hour.restMinutes)
+                            Text("📊 比率: \(String(format: "%.1f", ratio)):1")
+                                .foregroundColor(.secondary)
                         }
                     }
                     .font(.caption)
@@ -99,40 +104,38 @@ public struct GitHubHeatmapMatrixView: View {
                     .background(Color(NSColor.controlBackgroundColor))
                     .cornerRadius(6)
                 } else {
-                    Text("鼠标悬停在方块上查看具体专注与休息明细")
+                    Text("鼠标悬停在表盘圆环上查看具体小时专注与休息明细")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 
                 Spacer()
                 
-                // GitHub 经典图例 (少 ⬛ 🟩 🟩 🟩 🟩 多) + 休息微标
-                HStack(spacing: 6) {
-                    Text("少")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                    
-                    HStack(spacing: 3) {
-                        levelSquare(level0Color)
-                        levelSquare(Color(red: 0.055, green: 0.267, blue: 0.161)) // L1
-                        levelSquare(Color(red: 0.000, green: 0.427, blue: 0.196)) // L2
-                        levelSquare(Color(red: 0.149, green: 0.651, blue: 0.255)) // L3
-                        levelSquare(Color(red: 0.224, green: 0.827, blue: 0.325)) // L4
+                // 双弧流转圆环图例 (专注弧 + 休息弧 + 满环60m)
+                HStack(spacing: 8) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(red: 0.05, green: 0.52, blue: 1.0))
+                            .frame(width: 7, height: 7)
+                        Text("专注弧")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
                     }
-                    
-                    Text("多")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                    
-                    Divider()
-                        .frame(height: 12)
-                        .padding(.horizontal, 2)
                     
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(restBadgeColor)
-                            .frame(width: 6, height: 6)
-                        Text("含休息")
+                            .fill(Color(red: 0.18, green: 0.82, blue: 0.38))
+                            .frame(width: 7, height: 7)
+                        Text("休息弧")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack(spacing: 4) {
+                        Circle()
+                            .stroke(Color.primary.opacity(0.22), lineWidth: 1.5)
+                            .frame(width: 7, height: 7)
+                        Text("满环 60m")
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
@@ -145,39 +148,23 @@ public struct GitHubHeatmapMatrixView: View {
         .cornerRadius(12)
     }
     
-    private func levelSquare(_ color: Color) -> some View {
-        RoundedRectangle(cornerRadius: 2)
-            .fill(color)
-            .frame(width: 10, height: 10)
-            .overlay(
-                RoundedRectangle(cornerRadius: 2)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
-            )
-    }
-    
-    // MARK: - 方案 1：整块经典 GitHub 绿 + 休息微角标
+    // MARK: - 设计 A：双弧流转表盘圆环 (60分钟满圈表盘)
     private func heatmapCell(day: DayActivity, hour: HourActivity) -> some View {
-        let hasWork = hour.workMinutes > 0
-        let hasRest = hour.restMinutes > 0
-        
-        return ZStack(alignment: .bottomTrailing) {
-            // 主体：整块圆角方格（无活动为暗底，有专注时长则呈现正宗 GitHub 绿色阶）
+        ZStack {
             RoundedRectangle(cornerRadius: 3.5)
-                .fill(hasWork ? gitHubGreen(minutes: hour.workMinutes) : level0Color)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 3.5)
-                        .stroke(Color.primary.opacity(0.06), lineWidth: 0.6)
-                )
+                .fill(level0Color.opacity(0.35))
             
-            // 休息微角标：优雅内嵌于右下角（薄荷冰蓝点），保留整块规整性，绝不破碎对半切
-            if hasRest {
-                Circle()
-                    .fill(restBadgeColor)
-                    .frame(width: 4, height: 4)
-                    .padding(2.5)
-            }
+            DualArcRingView(
+                workMinutes: Double(hour.workMinutes),
+                restMinutes: Double(hour.restMinutes),
+                maxMinutes: 60.0,
+                size: 14.5,
+                lineWidth: 2.2,
+                showTrack: true
+            )
         }
         .frame(height: 18)
+        .contentShape(Rectangle())
         .onHover { isHovered in
             if isHovered {
                 hoveredCell = (day, hour)

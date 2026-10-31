@@ -50,7 +50,8 @@ public struct PresetManagerView: View {
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
-                            if engine.preset.id == preset.id {
+                            // 打勾标记：代表当前设为默认（下轮执行）的方案
+                            if presetStore.activePresetId == preset.id {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.accentColor)
                                     .font(.caption)
@@ -59,24 +60,23 @@ public struct PresetManagerView: View {
                         .tag(preset.id)
                     }
                 }
-                .onChange(of: selectedPresetId) { newId in
-                    if let selected = presetStore.presets.first(where: { $0.id == newId }) {
-                        presetStore.activePresetId = selected.id
-                        engine.preset = selected
-                    }
-                }
                 
                 Divider()
                 
-                // 底部操作栏（删除 + 上下移动，点选即应用，无冗余应用键）
+                // 底部操作栏（删除 + 上下移动，运行中或默认方案保护不可删除）
+                let isSelectedRunning = (engine.mode != .standby && engine.preset.id == selectedPresetId)
+                let isSelectedActiveDefault = (presetStore.activePresetId == selectedPresetId)
+                let canDelete = presetStore.presets.count > 1 && !isSelectedRunning && !isSelectedActiveDefault
+                
                 HStack(spacing: 6) {
                     Button(action: deleteSelectedPreset) {
                         Image(systemName: "trash")
-                            .foregroundColor(.red.opacity(0.8))
+                            .foregroundColor(canDelete ? .red.opacity(0.8) : .secondary.opacity(0.35))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .disabled(presetStore.presets.count <= 1)
+                    .disabled(!canDelete)
+                    .help(isSelectedRunning ? "当前方案正在运行中，不可删除" : (isSelectedActiveDefault ? "当前方案已设为默认方案，不可删除" : "删除选中的方案"))
                     
                     Button(action: { presetStore.moveUp(id: selectedPresetId) }) {
                         Image(systemName: "arrow.up")
@@ -137,6 +137,10 @@ public struct PresetManagerView: View {
     private func deleteSelectedPreset() {
         guard presetStore.presets.count > 1 else { return }
         let currentId = selectedPresetId
+        let isRunning = (engine.mode != .standby && engine.preset.id == currentId)
+        let isDefault = (presetStore.activePresetId == currentId)
+        guard !isRunning && !isDefault else { return }
+        
         if let currentIndex = presetStore.presets.firstIndex(where: { $0.id == currentId }) {
             let nextIndex = currentIndex > 0 ? currentIndex - 1 : 1
             selectedPresetId = presetStore.presets[nextIndex].id
@@ -174,6 +178,10 @@ public struct GeneralPreferencesView: View {
     @ObservedObject var engine: TimerEngine
     @AppStorage("BreakLoop.LaunchAtLogin") private var launchAtLogin: Bool = false
     @AppStorage("BreakLoop.MenuBarShowTime") private var menuBarShowTime: Bool = false
+    @AppStorage("BreakLoop.AutoStandbyOnScreenSaver") private var autoStandbyOnScreenSaver: Bool = true
+    @AppStorage("BreakLoop.AutoStandbyOnIdle") private var autoStandbyOnIdle: Bool = true
+    @AppStorage("BreakLoop.IdleTimeoutMinutes") private var idleTimeoutMinutes: Int = 10
+    @AppStorage("BreakLoop.PauseTimeoutMinutes") private var pauseTimeoutMinutes: Int = 5
     
     public init(engine: TimerEngine) {
         self.engine = engine
@@ -190,6 +198,34 @@ public struct GeneralPreferencesView: View {
                 Toggle("菜单栏显示倒计时进度", isOn: $menuBarShowTime)
             } header: {
                 Text("常规").font(.headline)
+            }
+            
+            Section {
+                Toggle("屏幕保护与锁屏时自动待机", isOn: $autoStandbyOnScreenSaver)
+                
+                Toggle("鼠标键盘长时间无操作时自动待机", isOn: $autoStandbyOnIdle)
+                if autoStandbyOnIdle {
+                    Picker("无操作判定超时", selection: $idleTimeoutMinutes) {
+                        Text("5 分钟").tag(5)
+                        Text("10 分钟 (推荐)").tag(10)
+                        Text("15 分钟").tag(15)
+                        Text("20 分钟").tag(20)
+                    }
+                }
+                
+                Picker("临时暂停超时自动转入待机", selection: $pauseTimeoutMinutes) {
+                    Text("3 分钟").tag(3)
+                    Text("5 分钟 (推荐)").tag(5)
+                    Text("10 分钟").tag(10)
+                    Text("15 分钟").tag(15)
+                    Text("从不超时").tag(0)
+                }
+            } header: {
+                Text("屏保与闲置保护").font(.headline)
+            } footer: {
+                Text("进入屏保或长时间无操作时自动转入待机，并自动回溯扣除离开时间；暂停超时自动收起待机，防后台虚耗。")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
         }
         .formStyle(.grouped)

@@ -20,8 +20,13 @@ public struct StatsView: View {
     @State private var dateAnchor: Date = Date()
     @State private var allSessionsInRange: [Session] = []
     @State private var daysActivity: [DayActivity] = []
+    @State private var dayHoursActivity: [HourActivity] = []
+    @State private var hoveredDayHour: HourActivity?
+    @State private var hoveredWeekDay: DayActivity?
     @State private var monthCells: [MonthCell] = []
+    @State private var hoveredMonthCell: MonthCell?
     @State private var yearMonthsData: [YearMonthData] = []
+    @State private var hoveredYearMonth: YearMonthData?
     @State private var showDatePickerPopover: Bool = false
     
     public init(engine: TimerEngine) {
@@ -354,11 +359,91 @@ public struct StatsView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
     
-    // MARK: - 1. 日视图（当天 24 小时流水甘特轴）
+    // MARK: - 1. 日视图（对比 24 个时间段表盘圆环 + 时序流水）
     private var dayTimelineView: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
+            // 顶部：24 小时表盘圆环对比轨 (满环 60m)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("当日 24 小时时段表盘对比")
+                        .font(.headline)
+                    Spacer()
+                    if let h = hoveredDayHour {
+                        HStack(spacing: 6) {
+                            Text(String(format: "%02d:00 ~ %02d:00", h.hour, (h.hour + 1) % 24))
+                                .fontWeight(.semibold)
+                            Text("💻 \(h.workMinutes)m")
+                                .foregroundColor(Color(red: 0.05, green: 0.52, blue: 1.0))
+                            if h.restMinutes > 0 {
+                                Text("☕️ \(h.restMinutes)m")
+                                    .foregroundColor(Color(red: 0.18, green: 0.82, blue: 0.38))
+                            }
+                            if h.sessionCount > 0 {
+                                Text("(\(h.sessionCount)次)")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .cornerRadius(6)
+                    } else {
+                        Text("指上去查看具体时段数值 · 满环 60m")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                // 24 个小时圆环横向滚动排布
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(dayHoursActivity) { hour in
+                            VStack(spacing: 4) {
+                                Text(String(format: "%02d", hour.hour))
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                
+                                DualArcRingView(
+                                    workMinutes: Double(hour.workMinutes),
+                                    restMinutes: Double(hour.restMinutes),
+                                    maxMinutes: 60.0,
+                                    size: 32,
+                                    lineWidth: 3.5,
+                                    showTrack: true
+                                )
+                                
+                                if hour.workMinutes > 0 || hour.restMinutes > 0 {
+                                    Text("\(hour.workMinutes)m")
+                                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                                        .foregroundColor(hour.workMinutes > 0 ? Color(red: 0.05, green: 0.52, blue: 1.0) : Color(red: 0.18, green: 0.82, blue: 0.38))
+                                } else {
+                                    Text("-")
+                                        .font(.system(size: 9))
+                                        .foregroundColor(.secondary.opacity(0.3))
+                                }
+                            }
+                            .frame(width: 36)
+                            .padding(.vertical, 4)
+                            .background(hoveredDayHour?.id == hour.id ? Color.primary.opacity(0.06) : Color.clear)
+                            .cornerRadius(6)
+                            .onHover { isH in
+                                if isH { hoveredDayHour = hour }
+                                else if hoveredDayHour?.id == hour.id { hoveredDayHour = nil }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                    .padding(.vertical, 4)
+                }
+            }
+            .padding(12)
+            .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            .cornerRadius(10)
+            
+            // 下方：时序流水
             HStack {
-                Text("当日专注与休息时序流水 (24小时)")
+                Text("当日工休时序流水")
                     .font(.headline)
                 Spacer()
                 Text("共 \(allSessionsInRange.count) 条记录")
@@ -385,7 +470,7 @@ public struct StatsView: View {
                             let isWork = s.kind == .work
                             HStack(spacing: 12) {
                                 RoundedRectangle(cornerRadius: 3)
-                                    .fill(isWork ? Color.blue : Color.green)
+                                    .fill(isWork ? Color(red: 0.05, green: 0.52, blue: 1.0) : Color(red: 0.18, green: 0.82, blue: 0.38))
                                     .frame(width: 4, height: 32)
                                 
                                 VStack(alignment: .leading, spacing: 2) {
@@ -405,7 +490,7 @@ public struct StatsView: View {
                                 
                                 Text(TimeFormatter.formatNatural(seconds: Int(s.duration)))
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
-                                    .foregroundColor(isWork ? .blue : .green)
+                                    .foregroundColor(isWork ? Color(red: 0.05, green: 0.52, blue: 1.0) : Color(red: 0.18, green: 0.82, blue: 0.38))
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
@@ -418,16 +503,75 @@ public struct StatsView: View {
         }
     }
     
-    // MARK: - 2. 周视图（当前选定周 7天×24小时矩阵）
+    // MARK: - 2. 周视图（对比 7 天每日圆环 + 7x24 小时微圆环矩阵）
     private var weekGridView: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
+            // 顶部：7 天单日圆环横向对比
+            HStack(spacing: 8) {
+                ForEach(daysActivity) { day in
+                    let dayWorkMins = day.hours.reduce(0) { $0 + $1.workMinutes }
+                    let dayRestMins = day.hours.reduce(0) { $0 + $1.restMinutes }
+                    let isHovered = hoveredWeekDay?.id == day.id
+                    
+                    VStack(spacing: 4) {
+                        Text(day.weekdayName)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        
+                        ZStack {
+                            DualArcRingView(
+                                workMinutes: Double(dayWorkMins),
+                                restMinutes: Double(dayRestMins),
+                                maxMinutes: 480.0, // 满环 8 小时
+                                size: 38,
+                                lineWidth: 4.2,
+                                showTrack: true
+                            )
+                            
+                            if let dayNum = day.dateString.split(separator: "-").last {
+                                Text(String(dayNum))
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                        
+                        if dayWorkMins > 0 {
+                            Text(String(format: "%.1fh", Double(dayWorkMins) / 60.0))
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .foregroundColor(Color(red: 0.05, green: 0.52, blue: 1.0))
+                        } else {
+                            Text("-")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary.opacity(0.3))
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(isHovered ? Color.primary.opacity(0.06) : Color(NSColor.controlBackgroundColor).opacity(0.5))
+                    .cornerRadius(8)
+                    .onHover { isH in
+                        if isH { hoveredWeekDay = day }
+                        else if hoveredWeekDay?.id == day.id { hoveredWeekDay = nil }
+                    }
+                }
+            }
+            
+            // 矩阵标题
             HStack {
-                Text("本周 24 小时专注分布矩阵")
+                Text("本周 24 小时时段微圆环矩阵")
                     .font(.headline)
                 Spacer()
-                Text("横轴 00:00 ~ 23:00")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                if let hover = hoveredWeekDay {
+                    let w = hover.hours.reduce(0) { $0 + $1.workMinutes }
+                    let r = hover.hours.reduce(0) { $0 + $1.restMinutes }
+                    Text("\(hover.weekdayName) \(hover.dateString): 💻 专注 \(String(format: "%.1f", Double(w)/60))h · ☕️ 休息 \(r)m")
+                        .font(.caption)
+                        .foregroundColor(Color(red: 0.05, green: 0.52, blue: 1.0))
+                } else {
+                    Text("横轴 00:00 ~ 23:00 · 满环 60m")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
             
             GitHubHeatmapMatrixView(days: daysActivity)
@@ -436,16 +580,23 @@ public struct StatsView: View {
         }
     }
     
-    // MARK: - 3. 月视图（整月日历格子热力图，支持点击任意天穿透到日视图）
+    // MARK: - 3. 月视图（整月 28~31 天日历圆环，指上去查看精确数值，点击穿透至日视图）
     private var monthCalendarGridView: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("月度专注日历热力")
+                Text("月度专注日历 (对比整月每天)")
                     .font(.headline)
                 Spacer()
-                Text("点击任意日期方格可穿透查看当日详情")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                if let cell = hoveredMonthCell {
+                    Text("\(cell.dayNumber)日: 💻 专注 \(cell.workMinutes)m · ☕️ 休息 \(cell.restMinutes)m (\(cell.sessionCount)次)")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color(red: 0.05, green: 0.52, blue: 1.0))
+                } else {
+                    Text("指上去查看具体数值 · 点击任意日期穿透查看当日详情")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
             
             // 7 列日历网格（周一至周日）
@@ -472,26 +623,37 @@ public struct StatsView: View {
                         }
                     }) {
                         VStack(spacing: 2) {
-                            Text("\(cell.dayNumber)")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(cell.isCurrentMonth ? .primary : .secondary.opacity(0.3))
+                            ZStack {
+                                if cell.isCurrentMonth {
+                                    DualArcRingView(
+                                        workMinutes: Double(cell.workMinutes),
+                                        restMinutes: Double(cell.restMinutes),
+                                        maxMinutes: 480.0, // 满环 8 小时
+                                        size: 30,
+                                        lineWidth: 3.2,
+                                        showTrack: true
+                                    )
+                                }
+                                
+                                Text("\(cell.dayNumber)")
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundColor(cell.isCurrentMonth ? .primary : .secondary.opacity(0.3))
+                            }
                             
-                            if cell.workMinutes > 0 {
+                            if cell.isCurrentMonth && cell.workMinutes > 0 {
                                 Text("\(cell.workMinutes)m")
                                     .font(.system(size: 9, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(Color(red: 0.05, green: 0.52, blue: 1.0))
                             } else {
                                 Text("-")
                                     .font(.system(size: 9))
                                     .foregroundColor(.clear)
                             }
                         }
-                        .frame(height: 48)
+                        .frame(height: 52)
                         .frame(maxWidth: .infinity)
                         .background(
-                            cell.isCurrentMonth
-                            ? (cell.workMinutes > 0 ? Color.blue.opacity(min(1.0, 0.25 + Double(cell.workMinutes) / 240.0)) : Color(NSColor.controlBackgroundColor))
-                            : Color.clear
+                            cell.isCurrentMonth ? Color(NSColor.controlBackgroundColor) : Color.clear
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                         .overlay(
@@ -500,6 +662,13 @@ public struct StatsView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .onHover { isH in
+                        if isH && cell.isCurrentMonth {
+                            hoveredMonthCell = cell
+                        } else if hoveredMonthCell?.id == cell.id {
+                            hoveredMonthCell = nil
+                        }
+                    }
                 }
             }
             
@@ -507,30 +676,84 @@ public struct StatsView: View {
         }
     }
     
-    // MARK: - 4. 年视图（全年 12 个月专注全景）
+    // MARK: - 4. 年视图（对比 12 个月度圆环，指上去查看精确数值，点击穿透至月视图）
     private var yearContributionView: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("年度月份专注分布")
+                Text("年度 12 个月度圆环对比")
                     .font(.headline)
                 Spacer()
-                Text("纵览全年各月专注成果")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                if let m = hoveredYearMonth {
+                    Text("\(m.monthLabel): 💻 专注 \(String(format: "%.1f", m.workHours))h · ☕️ 休息 \(String(format: "%.1f", m.restHours))h · \(m.sessionCount)轮")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color(red: 0.05, green: 0.52, blue: 1.0))
+                } else {
+                    Text("指上去查看具体数值 · 点击任意月份穿透查看当月详情 · 满环 160h")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
             
-            Chart(yearMonthsData) { item in
-                BarMark(
-                    x: .value("月份", item.monthLabel),
-                    y: .value("专注时长 (小时)", item.workHours)
-                )
-                .foregroundStyle(Color.blue.gradient)
-                .cornerRadius(4)
+            let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 4)
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(yearMonthsData) { item in
+                    Button(action: {
+                        dateAnchor = item.startDate
+                        currentScope = .month
+                    }) {
+                        VStack(spacing: 8) {
+                            Text(item.monthLabel)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.primary)
+                            
+                            ZStack {
+                                DualArcRingView(
+                                    workMinutes: item.workHours * 60,
+                                    restMinutes: item.restHours * 60,
+                                    maxMinutes: 160.0 * 60.0, // 满环 160 小时
+                                    size: 56,
+                                    lineWidth: 5.5,
+                                    showTrack: true
+                                )
+                                
+                                Text(item.monthLabel.replacingOccurrences(of: "月", with: ""))
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            VStack(spacing: 2) {
+                                Text("\(Int(round(item.workHours)))h 专注")
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundColor(item.workHours > 0 ? Color(red: 0.05, green: 0.52, blue: 1.0) : .secondary.opacity(0.4))
+                                
+                                if item.restHours > 0 {
+                                    Text("\(Int(round(item.restHours)))h 休息")
+                                        .font(.system(size: 9, design: .rounded))
+                                        .foregroundColor(Color(red: 0.18, green: 0.82, blue: 0.38))
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(hoveredYearMonth?.id == item.id ? Color.accentColor : Color.primary.opacity(0.06), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { isH in
+                        if isH {
+                            hoveredYearMonth = item
+                        } else if hoveredYearMonth?.id == item.id {
+                            hoveredYearMonth = nil
+                        }
+                    }
+                }
             }
-            .chartYAxis {
-                AxisMarks(position: .leading)
-            }
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
             
             Spacer(minLength: 0)
         }
@@ -592,7 +815,7 @@ public struct StatsView: View {
         
         switch currentScope {
         case .day:
-            break
+            buildDayHoursActivity(from: sessions, on: interval.start)
         case .week:
             buildWeekActivity(from: sessions, in: interval)
         case .month:
@@ -600,6 +823,30 @@ public struct StatsView: View {
         case .year:
             self.yearMonthsData = generateYearlyMonthsData(from: sessions, in: interval)
         }
+    }
+    
+    private func buildDayHoursActivity(from sessions: [Session], on dayStart: Date) {
+        var hours: [HourActivity] = []
+        for h in 0..<24 {
+            let hStart = calendar.date(byAdding: .hour, value: h, to: dayStart)!
+            let hEnd = calendar.date(byAdding: .hour, value: 1, to: hStart)!
+            
+            var wSec: TimeInterval = 0
+            var rSec: TimeInterval = 0
+            var count: Int = 0
+            
+            for s in sessions {
+                let overlapStart = max(s.start, hStart)
+                let overlapEnd = min(s.end, hEnd)
+                if overlapEnd > overlapStart {
+                    let dur = overlapEnd.timeIntervalSince(overlapStart)
+                    if s.kind == .work { wSec += dur } else { rSec += dur }
+                    count += 1
+                }
+            }
+            hours.append(HourActivity(hour: h, workSeconds: wSec, restSeconds: rSec, sessionCount: count))
+        }
+        self.dayHoursActivity = hours
     }
     
     private func currentInterval() -> DateInterval {
@@ -697,6 +944,8 @@ public struct StatsView: View {
         var isCurrentMonth: Bool
         var isToday: Bool
         var workMinutes: Int
+        var restMinutes: Int
+        var sessionCount: Int
     }
     
     private func generateMonthCalendarCells(from sessions: [Session], in interval: DateInterval) -> [MonthCell] {
@@ -711,7 +960,7 @@ public struct StatsView: View {
         
         for i in 0..<offset {
             let prevDate = calendar.date(byAdding: .day, value: -(offset - i), to: monthStart) ?? monthStart
-            cells.append(MonthCell(date: prevDate, dayNumber: calendar.component(.day, from: prevDate), isCurrentMonth: false, isToday: false, workMinutes: 0))
+            cells.append(MonthCell(date: prevDate, dayNumber: calendar.component(.day, from: prevDate), isCurrentMonth: false, isToday: false, workMinutes: 0, restMinutes: 0, sessionCount: 0))
         }
         
         for day in 1...daysCount {
@@ -719,11 +968,12 @@ public struct StatsView: View {
             let dayStart = calendar.startOfDay(for: curDate)
             let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
             
-            let daySessions = sessions.filter { $0.start >= dayStart && $0.start < dayEnd && $0.kind == .work }
-            let totalMins = Int(daySessions.reduce(0) { $0 + $1.duration } / 60)
+            let daySessions = sessions.filter { $0.start >= dayStart && $0.start < dayEnd }
+            let workMins = Int(daySessions.filter { $0.kind == .work }.reduce(0) { $0 + $1.duration } / 60)
+            let restMins = Int(daySessions.filter { $0.kind == .rest }.reduce(0) { $0 + $1.duration } / 60)
             let isTod = calendar.isDate(curDate, inSameDayAs: today)
             
-            cells.append(MonthCell(date: curDate, dayNumber: day, isCurrentMonth: true, isToday: isTod, workMinutes: totalMins))
+            cells.append(MonthCell(date: curDate, dayNumber: day, isCurrentMonth: true, isToday: isTod, workMinutes: workMins, restMinutes: restMins, sessionCount: daySessions.count))
         }
         
         return cells
@@ -733,7 +983,10 @@ public struct StatsView: View {
     private struct YearMonthData: Identifiable {
         var id: String { monthLabel }
         var monthLabel: String
+        var startDate: Date
         var workHours: Double
+        var restHours: Double
+        var sessionCount: Int
     }
     
     private func generateYearlyMonthsData(from sessions: [Session], in interval: DateInterval) -> [YearMonthData] {
@@ -744,11 +997,12 @@ public struct StatsView: View {
             let mStart = calendar.date(byAdding: .month, value: m, to: yearStart) ?? yearStart
             let mEnd = calendar.date(byAdding: .month, value: 1, to: mStart) ?? mStart
             
-            let mSessions = sessions.filter { $0.start >= mStart && $0.start < mEnd && $0.kind == .work }
-            let hours = mSessions.reduce(0) { $0 + $1.duration } / 3600.0
+            let mSessions = sessions.filter { $0.start >= mStart && $0.start < mEnd }
+            let wHours = mSessions.filter { $0.kind == .work }.reduce(0) { $0 + $1.duration } / 3600.0
+            let rHours = mSessions.filter { $0.kind == .rest }.reduce(0) { $0 + $1.duration } / 3600.0
             
             let label = "\(m + 1)月"
-            result.append(YearMonthData(monthLabel: label, workHours: hours))
+            result.append(YearMonthData(monthLabel: label, startDate: mStart, workHours: wHours, restHours: rHours, sessionCount: mSessions.count))
         }
         
         return result

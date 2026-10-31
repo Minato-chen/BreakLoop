@@ -419,4 +419,116 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertTrue(allSounds.contains(where: { $0.identifier == "Glass" }))
         XCTAssertTrue(allSounds.contains(where: { $0.identifier == "Ping" }))
     }
+    
+    // MARK: - 测试 12: 暂停与继续计时控制
+    func testPauseAndResume() {
+        let preset = Preset(
+            name: "PauseTest",
+            blocks: [
+                FlowBlock.makeWork(name: "专注", minutes: 20),
+                FlowBlock.makeCountdownRest(name: "休息", minutes: 5)
+            ]
+        )
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertFalse(engine.isPaused)
+        
+        // 前进 60 秒
+        simulatedDate.addTimeInterval(60)
+        engine.tick()
+        let secondsBeforePause = engine.currentSeconds
+        
+        // 触发暂停
+        engine.pause()
+        XCTAssertTrue(engine.isPaused)
+        XCTAssertTrue(engine.menuBarText.contains("暂停中"))
+        
+        // 暂停期间时间流逝 120 秒，tick 不应该扣除当前倒计时
+        simulatedDate.addTimeInterval(120)
+        engine.tick()
+        XCTAssertEqual(engine.currentSeconds, secondsBeforePause)
+        
+        // 恢复计时
+        engine.resume()
+        XCTAssertFalse(engine.isPaused)
+        XCTAssertEqual(engine.currentSeconds, secondsBeforePause)
+        
+        // 恢复后正常走时 30 秒
+        simulatedDate.addTimeInterval(30)
+        engine.tick()
+        XCTAssertEqual(engine.currentSeconds, secondsBeforePause - 30)
+    }
+    
+    // MARK: - 测试 13: 暂停超时自动转待机并回溯
+    func testPauseTimeoutAutoStandby() {
+        mockUserDefaults.set(5, forKey: "BreakLoop.PauseTimeoutMinutes")
+        let preset = Preset(
+            name: "PauseTimeoutTest",
+            blocks: [FlowBlock.makeWork(name: "专注", minutes: 25)]
+        )
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        engine.startCurrentBlock()
+        engine.pause()
+        XCTAssertTrue(engine.isPaused)
+        
+        // 暂停 6 分钟 (超过设定的 5 分钟上限)
+        simulatedDate.addTimeInterval(6 * 60)
+        engine.tick()
+        
+        // 引擎应自动收起进入待机态
+        XCTAssertEqual(engine.mode, .standby)
+        XCTAssertFalse(engine.isPaused)
+    }
+    
+    // MARK: - 测试 14: 打断恢复策略 (重置本步 / 断点续传 / 重置整轮)
+    func testInterruptionRecoveryStrategy() {
+        let preset = Preset(
+            name: "RecoveryTest",
+            blocks: [
+                FlowBlock.makeWork(name: "番茄 1", minutes: 20),
+                FlowBlock.makeCountdownRest(name: "短休 1", minutes: 5),
+                FlowBlock.makeWork(name: "番茄 2", minutes: 20)
+            ],
+            manualStandbyRecovery: .resume,
+            passiveStandbyRecovery: .resetCurrent
+        )
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        engine.startCurrentBlock()
+        
+        // 运行 5 分钟 (剩余 15 分钟 = 900 秒)
+        simulatedDate.addTimeInterval(5 * 60)
+        engine.tick()
+        XCTAssertEqual(engine.currentSeconds, 15 * 60)
+        
+        // 手动待机 (策略: .resume 断点续传)
+        engine.enterStandby(reason: .manual)
+        XCTAssertEqual(engine.mode, .standby)
+        
+        // 重新启动：由于策略为 .resume，应当保留还剩 15 分钟继续倒数
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertEqual(engine.currentSeconds, 15 * 60)
+        
+        // 再次被动待机（如锁屏 .locked，策略: .resetCurrent 重置当前步）
+        engine.enterStandby(reason: .locked)
+        engine.startCurrentBlock()
+        // 应当重新计满 20 分钟
+        XCTAssertEqual(engine.currentSeconds, 20 * 60)
+    }
 }
