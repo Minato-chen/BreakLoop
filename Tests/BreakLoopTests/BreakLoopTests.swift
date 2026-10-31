@@ -418,6 +418,18 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(allSounds.count, 5)
         XCTAssertTrue(allSounds.contains(where: { $0.identifier == "Glass" }))
         XCTAssertTrue(allSounds.contains(where: { $0.identifier == "Ping" }))
+        
+        // 全局默认提醒文案初始值与 FlowBlock 自动采用
+        XCTAssertFalse(soundManager.defaultWorkMessage.isEmpty)
+        XCTAssertFalse(soundManager.defaultRestMessage.isEmpty)
+        
+        let newWorkBlock = FlowBlock.makeWork()
+        XCTAssertEqual(newWorkBlock.message, soundManager.defaultWorkMessage)
+        XCTAssertEqual(newWorkBlock.soundName, soundManager.defaultWorkSound)
+        
+        let newRestBlock = FlowBlock.makeCountdownRest()
+        XCTAssertEqual(newRestBlock.message, soundManager.defaultRestMessage)
+        XCTAssertEqual(newRestBlock.soundName, soundManager.defaultRestSound)
     }
     
     // MARK: - 测试 12: 暂停与继续计时控制

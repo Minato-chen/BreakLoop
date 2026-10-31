@@ -134,43 +134,43 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
     }
     
     /// 快捷创建专注模块
-    public static func makeWork(name: String = "专注", minutes: Int = 20, message: String = "专注结束，该休息一下了", sound: String = "Glass") -> FlowBlock {
+    public static func makeWork(name: String = "专注", minutes: Int = 20, message: String? = nil, sound: String? = nil) -> FlowBlock {
         FlowBlock(
             type: .work,
             name: name,
             durationMinutes: minutes,
             timingMode: .countdown,
             targetSeconds: nil,
-            soundName: sound,
-            message: message,
+            soundName: sound ?? SoundManager.shared.defaultWorkSound,
+            message: message ?? SoundManager.shared.defaultWorkMessage,
             autoAdvance: true
         )
     }
     
     /// 快捷创建固定倒计时休息模块
-    public static func makeCountdownRest(name: String = "休息", minutes: Int = 5, message: String = "休息结束，准备开始下一轮专注", sound: String = "Ping") -> FlowBlock {
+    public static func makeCountdownRest(name: String = "休息", minutes: Int = 5, message: String? = nil, sound: String? = nil) -> FlowBlock {
         FlowBlock(
             type: .rest,
             name: name,
             durationMinutes: minutes,
             timingMode: .countdown,
             targetSeconds: nil,
-            soundName: sound,
-            message: message,
+            soundName: sound ?? SoundManager.shared.defaultRestSound,
+            message: message ?? SoundManager.shared.defaultRestMessage,
             autoAdvance: false
         )
     }
     
     /// 快捷创建自由正计时休息模块（用户自己决定）
-    public static func makeStopwatchRest(name: String = "休息(自由)", targetSeconds: Int = 20, message: String = "看远方 20 秒", sound: String = "Glass") -> FlowBlock {
+    public static func makeStopwatchRest(name: String = "休息(自由)", targetSeconds: Int = 20, message: String? = nil, sound: String? = nil) -> FlowBlock {
         FlowBlock(
             type: .rest,
             name: name,
             durationMinutes: max(1, targetSeconds / 60),
             timingMode: .stopwatch,
             targetSeconds: targetSeconds,
-            soundName: sound,
-            message: message,
+            soundName: sound ?? SoundManager.shared.defaultRestSound,
+            message: message ?? SoundManager.shared.defaultRestMessage,
             autoAdvance: false
         )
     }

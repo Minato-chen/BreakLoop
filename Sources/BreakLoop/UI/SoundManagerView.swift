@@ -6,7 +6,8 @@ import UniformTypeIdentifiers
 public struct SoundManagerView: View {
     @ObservedObject var engine: TimerEngine
     @ObservedObject var soundManager = SoundManager.shared
-    @State private var hasAppliedToAll: Bool = false
+    @State private var hasAppliedSoundsToAll: Bool = false
+    @State private var hasAppliedMessagesToAll: Bool = false
     
     public init(engine: TimerEngine) {
         self.engine = engine
@@ -197,84 +198,159 @@ public struct SoundManagerView: View {
                 Divider()
                 
                 // 4. 全局默认提示音
-                HStack(spacing: 20) {
-                    HStack(spacing: 8) {
-                        Text("专注默认音:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Picker("", selection: $soundManager.defaultWorkSound) {
-                            ForEach(soundManager.allAvailableSounds()) { option in
-                                Text(option.displayName).tag(option.identifier)
-                            }
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("全局默认提示音")
+                                .font(.system(size: 13, weight: .medium))
+                            Text("新建专注或休息模块时的初始提示音")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
-                        .pickerStyle(.menu)
-                        .frame(width: 130)
                         
-                        Button(action: {
-                            soundManager.preview(soundName: soundManager.defaultWorkSound, repeats: soundManager.defaultRepeatCount)
-                        }) {
-                            Image(systemName: "play.circle.fill")
-                                .foregroundColor(.accentColor)
+                        Spacer()
+                        
+                        Button(action: applyDefaultSoundsToAllBlocks) {
+                            HStack(spacing: 4) {
+                                if hasAppliedSoundsToAll {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.green)
+                                    Text("已覆盖提示音")
+                                        .foregroundColor(.green)
+                                } else {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                    Text("应用声音到全部")
+                                }
+                            }
+                            .font(.caption)
                         }
-                        .buttonStyle(.plain)
-                        .help("试听")
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .help("将当前选中的专注默认音与休息默认音，覆盖同步到所有方案现存的模块中")
                     }
                     
-                    Spacer()
-                    
-                    HStack(spacing: 8) {
-                        Text("休息默认音:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Picker("", selection: $soundManager.defaultRestSound) {
-                            ForEach(soundManager.allAvailableSounds()) { option in
-                                Text(option.displayName).tag(option.identifier)
+                    HStack(spacing: 20) {
+                        HStack(spacing: 8) {
+                            Text("专注默认音:")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Picker("", selection: $soundManager.defaultWorkSound) {
+                                ForEach(soundManager.allAvailableSounds()) { option in
+                                    Text(option.displayName).tag(option.identifier)
+                                }
                             }
+                            .pickerStyle(.menu)
+                            .frame(width: 135)
+                            
+                            Button(action: {
+                                soundManager.preview(soundName: soundManager.defaultWorkSound, repeats: soundManager.defaultRepeatCount)
+                            }) {
+                                Image(systemName: "play.circle.fill")
+                                    .foregroundColor(.accentColor)
+                            }
+                            .buttonStyle(.plain)
+                            .help("试听")
                         }
-                        .pickerStyle(.menu)
-                        .frame(width: 130)
                         
-                        Button(action: {
-                            soundManager.preview(soundName: soundManager.defaultRestSound, repeats: soundManager.defaultRepeatCount)
-                        }) {
-                            Image(systemName: "play.circle.fill")
-                                .foregroundColor(.accentColor)
+                        Spacer()
+                        
+                        HStack(spacing: 8) {
+                            Text("休息默认音:")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Picker("", selection: $soundManager.defaultRestSound) {
+                                ForEach(soundManager.allAvailableSounds()) { option in
+                                    Text(option.displayName).tag(option.identifier)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 135)
+                            
+                            Button(action: {
+                                soundManager.preview(soundName: soundManager.defaultRestSound, repeats: soundManager.defaultRepeatCount)
+                            }) {
+                                Image(systemName: "play.circle.fill")
+                                    .foregroundColor(.accentColor)
+                            }
+                            .buttonStyle(.plain)
+                            .help("试听")
                         }
-                        .buttonStyle(.plain)
-                        .help("试听")
                     }
                 }
                 
                 Divider()
                 
-                // 5. 一键应用到全部已有模块
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("覆盖应用到全部已有模块")
-                            .font(.system(size: 13, weight: .medium))
-                        Text("一键将上方选中的专注默认音与休息默认音，覆盖同步到所有方案现存的模块中")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                // 5. 全局默认提醒文案
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("全局默认提醒文案")
+                                .font(.system(size: 13, weight: .medium))
+                            Text("新建专注或休息模块时的初始弹窗与通知文案")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: applyDefaultMessagesToAllBlocks) {
+                            HStack(spacing: 4) {
+                                if hasAppliedMessagesToAll {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.green)
+                                    Text("已覆盖文案")
+                                        .foregroundColor(.green)
+                                } else {
+                                    Image(systemName: "text.badge.checkmark")
+                                    Text("应用文案到全部")
+                                }
+                            }
+                            .font(.caption)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .help("将当前设定的专注默认文案与休息默认文案，覆盖同步到所有方案现存的模块中")
                     }
                     
-                    Spacer()
-                    
-                    Button(action: applyDefaultSoundsToAllBlocks) {
-                        HStack(spacing: 4) {
-                            if hasAppliedToAll {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.green)
-                                Text("已覆盖全部")
-                                    .foregroundColor(.green)
-                            } else {
-                                Image(systemName: "arrow.triangle.2.circlepath")
-                                Text("应用到全部")
+                    VStack(spacing: 8) {
+                        HStack(spacing: 10) {
+                            Text("专注默认文案:")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .frame(width: 82, alignment: .trailing)
+                            TextField("例如：专注结束，该休息一下了", text: $soundManager.defaultWorkMessage)
+                                .textFieldStyle(.roundedBorder)
+                            
+                            if soundManager.defaultWorkMessage != "专注结束，该休息一下了" {
+                                Button(action: { soundManager.defaultWorkMessage = "专注结束，该休息一下了" }) {
+                                    Image(systemName: "arrow.counterclockwise")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .help("恢复为初始默认文案")
                             }
                         }
-                        .font(.caption)
+                        
+                        HStack(spacing: 10) {
+                            Text("休息默认文案:")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .frame(width: 82, alignment: .trailing)
+                            TextField("例如：休息结束，准备开始下一轮专注", text: $soundManager.defaultRestMessage)
+                                .textFieldStyle(.roundedBorder)
+                            
+                            if soundManager.defaultRestMessage != "休息结束，准备开始下一轮专注" {
+                                Button(action: { soundManager.defaultRestMessage = "休息结束，准备开始下一轮专注" }) {
+                                    Image(systemName: "arrow.counterclockwise")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .help("恢复为初始默认文案")
+                            }
+                        }
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
                 }
             }
             .padding(14)
@@ -305,11 +381,38 @@ public struct SoundManagerView: View {
             engine.preset = current
         }
         withAnimation {
-            hasAppliedToAll = true
+            hasAppliedSoundsToAll = true
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             withAnimation {
-                hasAppliedToAll = false
+                hasAppliedSoundsToAll = false
+            }
+        }
+    }
+    
+    private func applyDefaultMessagesToAllBlocks() {
+        let workMsg = soundManager.defaultWorkMessage
+        let restMsg = soundManager.defaultRestMessage
+        
+        for pIdx in PresetStore.shared.presets.indices {
+            for bIdx in PresetStore.shared.presets[pIdx].blocks.indices {
+                if PresetStore.shared.presets[pIdx].blocks[bIdx].type == .work {
+                    PresetStore.shared.presets[pIdx].blocks[bIdx].message = workMsg
+                } else {
+                    PresetStore.shared.presets[pIdx].blocks[bIdx].message = restMsg
+                }
+            }
+        }
+        PresetStore.shared.save()
+        if let current = PresetStore.shared.presets.first(where: { $0.id == engine.preset.id }) {
+            engine.preset = current
+        }
+        withAnimation {
+            hasAppliedMessagesToAll = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation {
+                hasAppliedMessagesToAll = false
             }
         }
     }

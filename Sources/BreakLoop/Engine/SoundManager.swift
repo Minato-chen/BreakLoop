@@ -54,6 +54,8 @@ public final class SoundManager: ObservableObject {
     private let customSoundsKey = "BreakLoop.SoundManager.CustomSounds"
     private let defaultWorkSoundKey = "BreakLoop.SoundManager.DefaultWorkSound"
     private let defaultRestSoundKey = "BreakLoop.SoundManager.DefaultRestSound"
+    private let defaultWorkMessageKey = "BreakLoop.SoundManager.DefaultWorkMessage"
+    private let defaultRestMessageKey = "BreakLoop.SoundManager.DefaultRestMessage"
     private let defaultRepeatCountKey = "BreakLoop.SoundManager.RepeatCount"
     private let maxDurationKey = "BreakLoop.SoundManager.MaxDuration"
     private let volumeKey = "BreakLoop.SoundManager.Volume"
@@ -65,6 +67,12 @@ public final class SoundManager: ObservableObject {
     }
     @Published public var defaultRestSound: String {
         didSet { UserDefaults.standard.set(defaultRestSound, forKey: defaultRestSoundKey) }
+    }
+    @Published public var defaultWorkMessage: String {
+        didSet { UserDefaults.standard.set(defaultWorkMessage, forKey: defaultWorkMessageKey) }
+    }
+    @Published public var defaultRestMessage: String {
+        didSet { UserDefaults.standard.set(defaultRestMessage, forKey: defaultRestMessageKey) }
     }
     @Published public var defaultRepeatCount: Int {
         didSet { UserDefaults.standard.set(defaultRepeatCount, forKey: defaultRepeatCountKey) }
@@ -97,6 +105,12 @@ public final class SoundManager: ObservableObject {
         let defaults = UserDefaults.standard
         self.defaultWorkSound = defaults.string(forKey: defaultWorkSoundKey) ?? "Glass"
         self.defaultRestSound = defaults.string(forKey: defaultRestSoundKey) ?? "Ping"
+        
+        let savedWorkMsg = defaults.string(forKey: defaultWorkMessageKey)
+        self.defaultWorkMessage = (savedWorkMsg != nil && !savedWorkMsg!.isEmpty) ? savedWorkMsg! : "专注结束，该休息一下了"
+        
+        let savedRestMsg = defaults.string(forKey: defaultRestMessageKey)
+        self.defaultRestMessage = (savedRestMsg != nil && !savedRestMsg!.isEmpty) ? savedRestMsg! : "休息结束，准备开始下一轮专注"
         
         let savedRepeat = defaults.integer(forKey: defaultRepeatCountKey)
         self.defaultRepeatCount = savedRepeat > 0 ? savedRepeat : 3 // 默认 3 次
