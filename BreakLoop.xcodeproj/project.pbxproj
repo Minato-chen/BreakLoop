@@ -1,0 +1,617 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0F9C194EF53C257FD719B547 /* MenuBarContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9EE61B1F19105F714B2560F /* MenuBarContent.swift */; };
+		29B55473F67A46F7D8A0EF01 /* BreakLoop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 621B875E15358E00CC041022 /* BreakLoop.swift */; };
+		36AB77E5235181119A97647F /* MainAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F2120EDED93B12388AA584 /* MainAppView.swift */; };
+		3D883AD6FEC65EC96557B004 /* BreakLoopTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DC5A1EE793A1853847BD04F /* BreakLoopTests.swift */; };
+		419EE32E9DECD01647770417 /* PresetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D2C643C9E3CAE6CE21B9F6 /* PresetStore.swift */; };
+		41E74BC5F12057180473DD23 /* BreakLoopWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A4F209D64580AC524DA450DA /* BreakLoopWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4DDFF9026F5F3354914E0157 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D55174B05A163C7AB0C66CB /* DashboardView.swift */; };
+		4E46E3F6FA69FC3803FBF54F /* AlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976DACB2F1F4547F8C5D4702 /* AlertManager.swift */; };
+		55A9DF94D26635EB6B7AE6FD /* GitHubHeatmapMatrixView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB62C97608A0F2BC678986CA /* GitHubHeatmapMatrixView.swift */; };
+		62D6FBD0D53EB508E6FA6090 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BC184D1D79B788BB53EF010 /* LaunchAtLogin.swift */; };
+		834D9CFA8CBC9D78CBD68F84 /* HotKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A3C0F6A91B0FB19D28986EA /* HotKeys.swift */; };
+		8BA78EE55CAAD60EEAC5D0CC /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF4A57CCFFD1832182EB043 /* Session.swift */; };
+		8EE601EA301019CFA55C5567 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7DF3E0AEA9D8E4B21C085D80 /* Assets.xcassets */; };
+		98A1E894465D89578D6C03AE /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91B8C9FD9DAFF78A8BFFB397 /* SettingsView.swift */; };
+		A513F2C3B768E1380858EA5D /* TimerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 306B71291AB988C7E3F81D10 /* TimerEngine.swift */; };
+		A7955BA269A2736B112F5873 /* BreakLoopWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DE989FB41DB60B78F4F8C75 /* BreakLoopWidget.swift */; };
+		B0BDC95ECF595FD2E73E845A /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16AE99647A6F99399299E22A /* StatsView.swift */; };
+		C4688C61927111448E06AFF0 /* WidgetSharedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31985D56B8BBA7253537F1DC /* WidgetSharedData.swift */; };
+		E0517924B5D11210D77D37EF /* IdleMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 395E2D4835640A34BCFFF1E8 /* IdleMonitor.swift */; };
+		E3EC69158CBE0639B35947B4 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18DF03B73F0B585FF19EFA25 /* SessionStore.swift */; };
+		E74CF4D412904EE52029D36C /* WidgetSharedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31985D56B8BBA7253537F1DC /* WidgetSharedData.swift */; };
+		F01CA4E00AC06F0087C33D33 /* Preset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 819E48A2A0A4FC3B4FD04E75 /* Preset.swift */; };
+		FE936C90F30B52495D639358 /* TimeFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2280862E87551D5ECD4971F9 /* TimeFormatter.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		852D5D42C1277277CE2172EF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 10590C71BCC1D313EAF49AE8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 57EC15223ADA709D317285EE;
+			remoteInfo = BreakLoop;
+		};
+		A4AA1386FF591EB1D9C8FAAA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 10590C71BCC1D313EAF49AE8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 973FF1970561FA75F73D2A8C;
+			remoteInfo = BreakLoopWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		EC9EE84F74103E6774CF19DA /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				41E74BC5F12057180473DD23 /* BreakLoopWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0A3C0F6A91B0FB19D28986EA /* HotKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeys.swift; sourceTree = "<group>"; };
+		0D55174B05A163C7AB0C66CB /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		16AE99647A6F99399299E22A /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
+		18DF03B73F0B585FF19EFA25 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		2280862E87551D5ECD4971F9 /* TimeFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormatter.swift; sourceTree = "<group>"; };
+		2DC5A1EE793A1853847BD04F /* BreakLoopTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakLoopTests.swift; sourceTree = "<group>"; };
+		306B71291AB988C7E3F81D10 /* TimerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerEngine.swift; sourceTree = "<group>"; };
+		31985D56B8BBA7253537F1DC /* WidgetSharedData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSharedData.swift; sourceTree = "<group>"; };
+		395E2D4835640A34BCFFF1E8 /* IdleMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleMonitor.swift; sourceTree = "<group>"; };
+		41655928E33C23C7CF80B8C5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		47BB6B792D906FDB95C614AE /* BreakLoopTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BreakLoopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		621B875E15358E00CC041022 /* BreakLoop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakLoop.swift; sourceTree = "<group>"; };
+		6CF4A57CCFFD1832182EB043 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
+		7DF3E0AEA9D8E4B21C085D80 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		819E48A2A0A4FC3B4FD04E75 /* Preset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preset.swift; sourceTree = "<group>"; };
+		8BC184D1D79B788BB53EF010 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
+		91B8C9FD9DAFF78A8BFFB397 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		976DACB2F1F4547F8C5D4702 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
+		9DE989FB41DB60B78F4F8C75 /* BreakLoopWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakLoopWidget.swift; sourceTree = "<group>"; };
+		A4F209D64580AC524DA450DA /* BreakLoopWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BreakLoopWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A6D2C643C9E3CAE6CE21B9F6 /* PresetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresetStore.swift; sourceTree = "<group>"; };
+		B5A10F7B19186F85B44E0380 /* BreakLoop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BreakLoop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB62C97608A0F2BC678986CA /* GitHubHeatmapMatrixView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubHeatmapMatrixView.swift; sourceTree = "<group>"; };
+		D3F2120EDED93B12388AA584 /* MainAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainAppView.swift; sourceTree = "<group>"; };
+		D9EE61B1F19105F714B2560F /* MenuBarContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContent.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		08DFA840A7D51769F22A5D1E /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				0A3C0F6A91B0FB19D28986EA /* HotKeys.swift */,
+				8BC184D1D79B788BB53EF010 /* LaunchAtLogin.swift */,
+				2280862E87551D5ECD4971F9 /* TimeFormatter.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		2E5D3386EAD8781118EDB5F4 = {
+			isa = PBXGroup;
+			children = (
+				4BB5341985415FEE60ED1A6F /* BreakLoop */,
+				C8A84C4C21843BD560E141FE /* BreakLoopTests */,
+				CE9FFCC23519D5C712DF325D /* BreakLoopWidget */,
+				7527B216AD14024881A91E5B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4BB5341985415FEE60ED1A6F /* BreakLoop */ = {
+			isa = PBXGroup;
+			children = (
+				7DF3E0AEA9D8E4B21C085D80 /* Assets.xcassets */,
+				621B875E15358E00CC041022 /* BreakLoop.swift */,
+				A629CCAFD45A0B7265DBDE16 /* Engine */,
+				A1A6EFF14012A2CAF309EDCC /* Model */,
+				08DFA840A7D51769F22A5D1E /* Support */,
+				B3DBA43306E6641B76DD7433 /* UI */,
+			);
+			name = BreakLoop;
+			path = Sources/BreakLoop;
+			sourceTree = "<group>";
+		};
+		7527B216AD14024881A91E5B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B5A10F7B19186F85B44E0380 /* BreakLoop.app */,
+				47BB6B792D906FDB95C614AE /* BreakLoopTests.xctest */,
+				A4F209D64580AC524DA450DA /* BreakLoopWidgetExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1A6EFF14012A2CAF309EDCC /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				819E48A2A0A4FC3B4FD04E75 /* Preset.swift */,
+				A6D2C643C9E3CAE6CE21B9F6 /* PresetStore.swift */,
+				6CF4A57CCFFD1832182EB043 /* Session.swift */,
+				18DF03B73F0B585FF19EFA25 /* SessionStore.swift */,
+				31985D56B8BBA7253537F1DC /* WidgetSharedData.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		A629CCAFD45A0B7265DBDE16 /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				976DACB2F1F4547F8C5D4702 /* AlertManager.swift */,
+				395E2D4835640A34BCFFF1E8 /* IdleMonitor.swift */,
+				306B71291AB988C7E3F81D10 /* TimerEngine.swift */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		B3DBA43306E6641B76DD7433 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				0D55174B05A163C7AB0C66CB /* DashboardView.swift */,
+				BB62C97608A0F2BC678986CA /* GitHubHeatmapMatrixView.swift */,
+				D3F2120EDED93B12388AA584 /* MainAppView.swift */,
+				D9EE61B1F19105F714B2560F /* MenuBarContent.swift */,
+				91B8C9FD9DAFF78A8BFFB397 /* SettingsView.swift */,
+				16AE99647A6F99399299E22A /* StatsView.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		C8A84C4C21843BD560E141FE /* BreakLoopTests */ = {
+			isa = PBXGroup;
+			children = (
+				2DC5A1EE793A1853847BD04F /* BreakLoopTests.swift */,
+			);
+			name = BreakLoopTests;
+			path = Tests/BreakLoopTests;
+			sourceTree = "<group>";
+		};
+		CE9FFCC23519D5C712DF325D /* BreakLoopWidget */ = {
+			isa = PBXGroup;
+			children = (
+				9DE989FB41DB60B78F4F8C75 /* BreakLoopWidget.swift */,
+				41655928E33C23C7CF80B8C5 /* Info.plist */,
+			);
+			path = BreakLoopWidget;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		57EC15223ADA709D317285EE /* BreakLoop */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F0E7CF304B7E1494F0635C05 /* Build configuration list for PBXNativeTarget "BreakLoop" */;
+			buildPhases = (
+				D49A26A476D8BF4880B7E3BD /* Sources */,
+				060DAFD32B0718E7BFE6E436 /* Resources */,
+				EC9EE84F74103E6774CF19DA /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				165B96CC28EAE87E6947E7D6 /* PBXTargetDependency */,
+			);
+			name = BreakLoop;
+			packageProductDependencies = (
+			);
+			productName = BreakLoop;
+			productReference = B5A10F7B19186F85B44E0380 /* BreakLoop.app */;
+			productType = "com.apple.product-type.application";
+		};
+		8DC9939CE5A4D53684099846 /* BreakLoopTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5BC6B49C7EE7640C6CECF983 /* Build configuration list for PBXNativeTarget "BreakLoopTests" */;
+			buildPhases = (
+				EDA3A80E1E757FEA1D7C7043 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A8D8E4CA4A4D91CD03208166 /* PBXTargetDependency */,
+			);
+			name = BreakLoopTests;
+			packageProductDependencies = (
+			);
+			productName = BreakLoopTests;
+			productReference = 47BB6B792D906FDB95C614AE /* BreakLoopTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		973FF1970561FA75F73D2A8C /* BreakLoopWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EDA01A3434CAC7271CEE4BE9 /* Build configuration list for PBXNativeTarget "BreakLoopWidgetExtension" */;
+			buildPhases = (
+				7D70CD83971039DF0FD81B02 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BreakLoopWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = BreakLoopWidgetExtension;
+			productReference = A4F209D64580AC524DA450DA /* BreakLoopWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		10590C71BCC1D313EAF49AE8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2710;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = 6DABF5FEECCBC193307C58E2 /* Build configuration list for PBXProject "BreakLoop" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 2E5D3386EAD8781118EDB5F4;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 7527B216AD14024881A91E5B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				57EC15223ADA709D317285EE /* BreakLoop */,
+				8DC9939CE5A4D53684099846 /* BreakLoopTests */,
+				973FF1970561FA75F73D2A8C /* BreakLoopWidgetExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		060DAFD32B0718E7BFE6E436 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8EE601EA301019CFA55C5567 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7D70CD83971039DF0FD81B02 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A7955BA269A2736B112F5873 /* BreakLoopWidget.swift in Sources */,
+				E74CF4D412904EE52029D36C /* WidgetSharedData.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D49A26A476D8BF4880B7E3BD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4E46E3F6FA69FC3803FBF54F /* AlertManager.swift in Sources */,
+				29B55473F67A46F7D8A0EF01 /* BreakLoop.swift in Sources */,
+				4DDFF9026F5F3354914E0157 /* DashboardView.swift in Sources */,
+				55A9DF94D26635EB6B7AE6FD /* GitHubHeatmapMatrixView.swift in Sources */,
+				834D9CFA8CBC9D78CBD68F84 /* HotKeys.swift in Sources */,
+				E0517924B5D11210D77D37EF /* IdleMonitor.swift in Sources */,
+				62D6FBD0D53EB508E6FA6090 /* LaunchAtLogin.swift in Sources */,
+				36AB77E5235181119A97647F /* MainAppView.swift in Sources */,
+				0F9C194EF53C257FD719B547 /* MenuBarContent.swift in Sources */,
+				F01CA4E00AC06F0087C33D33 /* Preset.swift in Sources */,
+				419EE32E9DECD01647770417 /* PresetStore.swift in Sources */,
+				8BA78EE55CAAD60EEAC5D0CC /* Session.swift in Sources */,
+				E3EC69158CBE0639B35947B4 /* SessionStore.swift in Sources */,
+				98A1E894465D89578D6C03AE /* SettingsView.swift in Sources */,
+				B0BDC95ECF595FD2E73E845A /* StatsView.swift in Sources */,
+				FE936C90F30B52495D639358 /* TimeFormatter.swift in Sources */,
+				A513F2C3B768E1380858EA5D /* TimerEngine.swift in Sources */,
+				C4688C61927111448E06AFF0 /* WidgetSharedData.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EDA3A80E1E757FEA1D7C7043 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3D883AD6FEC65EC96557B004 /* BreakLoopTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		165B96CC28EAE87E6947E7D6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 973FF1970561FA75F73D2A8C /* BreakLoopWidgetExtension */;
+			targetProxy = A4AA1386FF591EB1D9C8FAAA /* PBXContainerItemProxy */;
+		};
+		A8D8E4CA4A4D91CD03208166 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 57EC15223ADA709D317285EE /* BreakLoop */;
+			targetProxy = 852D5D42C1277277CE2172EF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		081601B31140B1D89DFCAAD4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.breakloop.BreakLoopTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BreakLoop.app/Contents/MacOS/BreakLoop";
+			};
+			name = Debug;
+		};
+		456ABB0C49D0852C064EEF73 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.breakloop.BreakLoopTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BreakLoop.app/Contents/MacOS/BreakLoop";
+			};
+			name = Release;
+		};
+		6AA865A8567FD14C95E8679E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = BreakLoopWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.breakloop.BreakLoop.WidgetExtension;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		8AC46E5DA0FC2345C95623F4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = "BreakLoop-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.breakloop.BreakLoop;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		A866FD89FD0AAE3202412635 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		AF654810EDC958373E879A1F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = BreakLoopWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.breakloop.BreakLoop.WidgetExtension;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		BE0F6E21746A0EADCE9D645D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = "BreakLoop-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.breakloop.BreakLoop;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		FD3EDA41EE39D4372587E894 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5BC6B49C7EE7640C6CECF983 /* Build configuration list for PBXNativeTarget "BreakLoopTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				081601B31140B1D89DFCAAD4 /* Debug */,
+				456ABB0C49D0852C064EEF73 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6DABF5FEECCBC193307C58E2 /* Build configuration list for PBXProject "BreakLoop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FD3EDA41EE39D4372587E894 /* Debug */,
+				A866FD89FD0AAE3202412635 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EDA01A3434CAC7271CEE4BE9 /* Build configuration list for PBXNativeTarget "BreakLoopWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6AA865A8567FD14C95E8679E /* Debug */,
+				AF654810EDC958373E879A1F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F0E7CF304B7E1494F0635C05 /* Build configuration list for PBXNativeTarget "BreakLoop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BE0F6E21746A0EADCE9D645D /* Debug */,
+				8AC46E5DA0FC2345C95623F4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 10590C71BCC1D313EAF49AE8 /* Project object */;
+}
