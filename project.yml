@@ -52,8 +52,12 @@ targets:
       - path: Sources/BreakLoop/Model/WidgetSharedData.swift
     info:
       path: BreakLoopWidget/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.breakloop.BreakLoop.WidgetExtension
         INFOPLIST_FILE: BreakLoopWidget/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_IDENTITY: "-"
