@@ -24,6 +24,33 @@ public struct PipelineFlowCanvasView: View {
             // 顶部方案标题栏
             headerSection
             
+            // 进行中的方案配置锁定提示横幅
+            if isPresetRunning {
+                HStack(spacing: 8) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.orange)
+                    Text("当前方案正在运行中（步骤 \(engine.currentBlockIndex + 1)/\(preset.blocks.count)），配置已锁定。如需更改，请先让方案进入待机。")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button("进入待机") {
+                        engine.enterStandby(reason: .manual)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(Color.orange.opacity(0.08))
+                .overlay(
+                    Rectangle()
+                        .fill(Color.orange.opacity(0.18))
+                        .frame(height: 1),
+                    alignment: .bottom
+                )
+            }
+            
             Divider()
             
             // 流程图卡片序列与回路
@@ -94,12 +121,13 @@ public struct PipelineFlowCanvasView: View {
     private var headerSection: some View {
         HStack(spacing: 12) {
             HStack(spacing: 6) {
-                Image(systemName: "square.stack.3d.down.right.fill")
-                    .foregroundColor(.accentColor)
+                Image(systemName: isPresetRunning ? "lock.square.stack.fill" : "square.stack.3d.down.right.fill")
+                    .foregroundColor(isPresetRunning ? .orange : .accentColor)
                 TextField("方案名称", text: $preset.name)
                     .font(.system(size: 15, weight: .bold))
                     .textFieldStyle(.plain)
                     .frame(maxWidth: 180)
+                    .disabled(isPresetRunning)
             }
             
             Text("(\(preset.blocks.count) 步循环)")
@@ -213,6 +241,7 @@ public struct PipelineFlowCanvasView: View {
             .padding(10)
             .background(Color(NSColor.controlBackgroundColor))
             .cornerRadius(8)
+            .disabled(isPresetRunning)
         }
         .padding(.top, 16)
     }
@@ -256,6 +285,7 @@ public struct PipelineFlowCanvasView: View {
                         .font(.system(size: 13, weight: .semibold))
                         .textFieldStyle(.plain)
                         .frame(minWidth: 70, maxWidth: 120)
+                        .disabled(isPresetRunning)
                     
                     Text(isWork ? "专注" : (isStopwatch ? "休息(自由)" : "休息"))
                         .font(.system(size: 10, weight: .medium))
@@ -374,11 +404,13 @@ public struct PipelineFlowCanvasView: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(isPresetRunning ? .secondary.opacity(0.3) : .secondary)
                         .frame(width: 18, height: 18)
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
+                .disabled(isPresetRunning)
+                .help(isPresetRunning ? "当前方案正在运行中，不可增删或排序模块" : "更多操作")
                 
                 // 展开/折叠切换按钮
                 Button(action: {
@@ -406,7 +438,8 @@ public struct PipelineFlowCanvasView: View {
                 Divider()
                     .padding(.horizontal, 8)
                 
-                if isWork {
+                Group {
+                    if isWork {
                     // 💻 专注模块配置（固定倒计时，无歧义，专注高效）
                     VStack(alignment: .leading, spacing: 10) {
                         // (1) 专注时长与稍后提醒
@@ -701,7 +734,9 @@ public struct PipelineFlowCanvasView: View {
                     .background(Color.primary.opacity(0.02))
                 }
             }
+            .disabled(isPresetRunning)
         }
+    }
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color(NSColor.controlBackgroundColor))
@@ -720,54 +755,57 @@ public struct PipelineFlowCanvasView: View {
         return ZStack {
             // 纯粹干净的垂直连接线（保持笔直贯穿，无重叠阻断）
             Rectangle()
-                .fill(isHovered ? Color.accentColor.opacity(0.4) : Color.primary.opacity(0.12))
+                .fill(isHovered && !isPresetRunning ? Color.accentColor.opacity(0.4) : Color.primary.opacity(0.12))
                 .frame(width: 1.5, height: 26)
             
-            // 悬停时显现的右侧微型分支引导线
-            Rectangle()
-                .fill(Color.accentColor.opacity(0.35))
-                .frame(width: 12, height: 1.2)
-                .offset(x: 6)
-                .opacity(isHovered ? 1.0 : 0.0)
-            
-            // 方案 1：向右偏离中心线的侧挂式插入按钮（限定圆形，悬停才高亮显现）
-            Menu {
-                Button(action: {
-                    insertAction(FlowBlock.makeWork())
-                }) {
-                    Label("插入专注模块", systemImage: "laptopcomputer")
-                }
+            if !isPresetRunning {
+                // 悬停时显现的右侧微型分支引导线
+                Rectangle()
+                    .fill(Color.accentColor.opacity(0.35))
+                    .frame(width: 12, height: 1.2)
+                    .offset(x: 6)
+                    .opacity(isHovered ? 1.0 : 0.0)
                 
-                Button(action: {
-                    insertAction(FlowBlock.makeCountdownRest(name: "休息", minutes: 5))
-                }) {
-                    Label("插入休息模块", systemImage: "cup.and.saucer.fill")
+                // 方案 1：向右偏离中心线的侧挂式插入按钮（限定圆形，悬停才高亮显现）
+                Menu {
+                    Button(action: {
+                        insertAction(FlowBlock.makeWork())
+                    }) {
+                        Label("插入专注模块", systemImage: "laptopcomputer")
+                    }
+                    
+                    Button(action: {
+                        insertAction(FlowBlock.makeCountdownRest(name: "休息", minutes: 5))
+                    }) {
+                        Label("插入休息模块", systemImage: "cup.and.saucer.fill")
+                    }
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Color(NSColor.controlBackgroundColor))
+                            .frame(width: 20, height: 20)
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        Image(systemName: "plus")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.accentColor)
+                    }
+                    .overlay(
+                        Circle().stroke(Color.accentColor.opacity(0.6), lineWidth: 1.2)
+                    )
                 }
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(Color(NSColor.controlBackgroundColor))
-                        .frame(width: 20, height: 20)
-                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                    Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.accentColor)
-                }
-                .overlay(
-                    Circle().stroke(Color.accentColor.opacity(0.6), lineWidth: 1.2)
-                )
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .frame(width: 20, height: 20)
+                .contentShape(Circle())
+                .offset(x: 22)
+                .opacity(isHovered ? 1.0 : 0.0)
+                .help(tooltip)
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .frame(width: 20, height: 20)
-            .contentShape(Circle())
-            .offset(x: 22)
-            .opacity(isHovered ? 1.0 : 0.0)
-            .help(tooltip)
         }
         .frame(width: 80, height: 26)
         .contentShape(Rectangle())
         .onHover { h in
+            guard !isPresetRunning else { return }
             withAnimation(.easeInOut(duration: 0.15)) {
                 hoveredConnectorId = h ? id : nil
             }
