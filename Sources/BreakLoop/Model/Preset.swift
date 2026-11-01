@@ -93,13 +93,13 @@ public struct RotationRule: Codable, Identifiable, Equatable {
 
 /// 自由休息到达截止阈值时的处理行为
 public enum CutoffAction: String, Codable, CaseIterable {
-    case alertAndStandby = "alert"      // 弹窗提醒（无人响应自动待机）
-    case silentAndStandby = "silent"    // 仅彻底静默（零弹窗，超时自动待机）
+    case alertAndStandby = "alert"      // 弹窗提醒（到期后待机）
+    case silentAndStandby = "silent"    // 保持静默，不弹窗
     
     public var displayName: String {
         switch self {
-        case .alertAndStandby: return "弹窗提醒（无人响应自动待机）"
-        case .silentAndStandby: return "仅彻底静默（零弹窗，超时自动待机）"
+        case .alertAndStandby: return "弹窗提醒（到期后待机）"
+        case .silentAndStandby: return "保持静默，不弹窗"
         }
     }
 }

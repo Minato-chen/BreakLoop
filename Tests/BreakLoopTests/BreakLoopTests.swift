@@ -374,8 +374,8 @@ final class BreakLoopTests: XCTestCase {
             nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
         )
         
-        // 待机状态默认：待命 (隐藏步数)
-        XCTAssertEqual(engine.menuBarText, "待命")
+        // 待机状态默认：待机 (隐藏步数)
+        XCTAssertEqual(engine.menuBarText, "待机")
         
         // 工作状态默认：<25m (隐藏步数，倒计时带 <)
         engine.startCurrentBlock()
@@ -784,9 +784,9 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(engine.currentBlockIndex, 0)
         XCTAssertEqual(engine.currentSeconds, 25 * 60)
         
-        // 验证菜单栏在待机时显示“待命”
+        // 验证菜单栏在待机时显示“待机”
         engine.updateMenuBarText()
-        XCTAssertEqual(engine.menuBarText, "待命")
+        XCTAssertEqual(engine.menuBarText, "待机")
     }
     
     // MARK: - 测试 20: 工作结束提醒与「离开工位」主按钮交互防跳过机制

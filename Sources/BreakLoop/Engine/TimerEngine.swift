@@ -455,7 +455,7 @@ public final class TimerEngine: ObservableObject {
         
         switch mode {
         case .standby:
-            menuBarText = showStep ? "\(total)步" : "待命"
+            menuBarText = showStep ? "\(total)步" : "待机"
         case .working:
             let mins = max(1, Int(ceil(Double(max(0, currentSeconds)) / 60.0)))
             menuBarText = "\(stepPrefix)\(countdownSym)\(mins)m"

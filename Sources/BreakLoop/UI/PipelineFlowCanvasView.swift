@@ -148,7 +148,7 @@ public struct PipelineFlowCanvasView: View {
                             }
                             Text(isDefault ? "已设为下轮默认" : "应用为下轮默认")
                         }
-                        .font(.caption)
+                        .font(.system(size: 12, weight: .medium))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -162,8 +162,7 @@ public struct PipelineFlowCanvasView: View {
                         engine.startCurrentBlock()
                     }) {
                         Label("立即启用", systemImage: "play.fill")
-                            .font(.caption)
-                            .fontWeight(.medium)
+                            .font(.system(size: 12, weight: .semibold))
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
@@ -191,23 +190,22 @@ public struct PipelineFlowCanvasView: View {
         .clipShape(Capsule())
     }
     
-    // MARK: - 方案专属打断恢复策略配置
+    // MARK: - 打断恢复策略配置
     private var interruptRecoverySection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
                     .foregroundColor(.accentColor)
-                    .font(.caption)
-                Text("打断恢复策略（本方案专有）")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 13, weight: .semibold))
+                Text("打断恢复策略")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(.primary.opacity(0.85))
             }
             
-            VStack(spacing: 6) {
+            VStack(spacing: 8) {
                 HStack {
                     Text("💻 专注被打断恢复:")
-                        .font(.caption)
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
                     Picker("", selection: $preset.workInterruptRecovery) {
@@ -221,7 +219,7 @@ public struct PipelineFlowCanvasView: View {
                 
                 HStack {
                     Text("☕️ 休息被打断恢复:")
-                        .font(.caption)
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
                     Picker("", selection: $preset.restInterruptRecovery) {
@@ -441,19 +439,19 @@ public struct PipelineFlowCanvasView: View {
                         HStack(spacing: 12) {
                             HStack(spacing: 6) {
                                 Text("专注时长:")
-                                    .font(.caption)
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.secondary)
                                 
                                 TextField("", value: binding(for: index).durationMinutes, formatter: Self.intFormatter)
                                     .textFieldStyle(.roundedBorder)
                                     .multilineTextAlignment(.trailing)
-                                    .frame(width: 50)
+                                    .frame(width: 48)
                                 
-                                Stepper("", value: binding(for: index).durationMinutes, in: 1...180)
+                                Stepper("", value: binding(for: index).durationMinutes, in: 1...480)
                                     .labelsHidden()
                                 
                                 Text("分钟")
-                                    .font(.caption)
+                                    .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                             }
                             
@@ -461,23 +459,27 @@ public struct PipelineFlowCanvasView: View {
                             
                             HStack(spacing: 6) {
                                 Text("稍后提醒:")
-                                    .font(.caption)
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.secondary)
-                                Picker("", selection: binding(for: index).snoozeMinutes) {
-                                    Text("3 分钟").tag(3)
-                                    Text("5 分钟 (默认)").tag(5)
-                                    Text("10 分钟").tag(10)
-                                    Text("15 分钟").tag(15)
-                                }
-                                .pickerStyle(.menu)
-                                .frame(width: 110)
+                                
+                                TextField("", value: binding(for: index).snoozeMinutes, formatter: Self.intFormatter)
+                                    .textFieldStyle(.roundedBorder)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 44)
+                                
+                                Stepper("", value: binding(for: index).snoozeMinutes, in: 1...60)
+                                    .labelsHidden()
+                                
+                                Text("分钟")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
                             }
                         }
                         
                         // (2) 提示音设置
                         HStack(spacing: 6) {
                             Text("到点提示音:")
-                                .font(.caption)
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.secondary)
                             Picker("", selection: binding(for: index).soundName) {
                                 ForEach(SoundManager.shared.allAvailableSounds()) { option in
@@ -485,13 +487,13 @@ public struct PipelineFlowCanvasView: View {
                                 }
                             }
                             .pickerStyle(.menu)
-                            .frame(width: 140)
+                            .frame(minWidth: 165)
                             
                             Button(action: {
                                 SoundManager.shared.preview(soundName: preset.blocks[index].soundName)
                             }) {
                                 Image(systemName: "speaker.wave.2.fill")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 12))
                                     .foregroundColor(.accentColor)
                             }
                             .buttonStyle(.plain)
@@ -503,7 +505,7 @@ public struct PipelineFlowCanvasView: View {
                         // (3) 提示文案（通栏宽框）
                         HStack(spacing: 6) {
                             Text("提示文案:")
-                                .font(.caption)
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.secondary)
                             TextField("如：专注结束，起身活动一下吧...", text: binding(for: index).message)
                                 .textFieldStyle(.roundedBorder)
@@ -513,124 +515,191 @@ public struct PipelineFlowCanvasView: View {
                         
                         // (4) 结束后自动推进
                         Toggle("专注结束后自动推进到下一步", isOn: binding(for: index).autoAdvance)
-                            .font(.caption)
+                            .font(.system(size: 12))
                     }
                     .padding(12)
                     .background(Color.primary.opacity(0.02))
                 } else {
                     // ☕️ 休息模块配置（仅在此提供 倒计时 / 正计时 形式选择）
                     VStack(alignment: .leading, spacing: 10) {
-                        // (1) 休息形式与具体时长
-                        HStack(spacing: 12) {
-                            HStack(spacing: 6) {
-                                Text("休息形式:")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Picker("", selection: Binding(
-                                    get: { block.timingMode },
-                                    set: { newMode in
-                                        binding(for: index).timingMode.wrappedValue = newMode
-                                        if newMode == .countdown {
-                                            binding(for: index).name.wrappedValue = "休息"
-                                        } else {
-                                            binding(for: index).name.wrappedValue = "休息(自由)"
-                                            binding(for: index).autoAdvance.wrappedValue = false
-                                        }
+                        // (1) 休息形式
+                        HStack(spacing: 6) {
+                            Text("休息形式:")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                            Picker("", selection: Binding(
+                                get: { block.timingMode },
+                                set: { newMode in
+                                    binding(for: index).timingMode.wrappedValue = newMode
+                                    if newMode == .countdown {
+                                        binding(for: index).name.wrappedValue = "休息"
+                                    } else {
+                                        binding(for: index).name.wrappedValue = "休息(自由)"
+                                        binding(for: index).autoAdvance.wrappedValue = false
                                     }
-                                )) {
-                                    Text("⏳ 固定倒计时").tag(BlockTimingMode.countdown)
-                                    Text("⏱️ 自由休息 (正计时)").tag(BlockTimingMode.stopwatch)
                                 }
-                                .pickerStyle(.menu)
-                                .frame(width: 140)
+                            )) {
+                                Text("倒计时 (固定时长)").tag(BlockTimingMode.countdown)
+                                Text("自由休息 (正计时)").tag(BlockTimingMode.stopwatch)
                             }
+                            .pickerStyle(.menu)
+                            .frame(minWidth: 165)
                             
                             Spacer()
-                            
-                            if block.timingMode == .countdown {
+                        }
+                        
+                        if block.timingMode == .countdown {
+                            // (2) 倒计时专属：休息时长 与 稍后提醒（同行对齐，节奏同专注模块）
+                            HStack(spacing: 12) {
                                 HStack(spacing: 6) {
-                                    Text("时长:")
-                                        .font(.caption)
+                                    Text("休息时长:")
+                                        .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.secondary)
                                     
-                                    if block.countdownSeconds != nil {
-                                        TextField("", value: Binding(
-                                            get: { preset.blocks[index].countdownSeconds ?? 20 },
-                                            set: { preset.blocks[index].countdownSeconds = max(1, $0) }
-                                        ), formatter: Self.intFormatter)
+                                    TextField("", value: Binding(
+                                        get: { block.durationMinutes },
+                                        set: {
+                                            binding(for: index).durationMinutes.wrappedValue = max(1, min(240, $0))
+                                            binding(for: index).countdownSeconds.wrappedValue = nil
+                                        }
+                                    ), formatter: Self.intFormatter)
+                                    .textFieldStyle(.roundedBorder)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 48)
+                                    
+                                    Stepper("", value: Binding(
+                                        get: { block.durationMinutes },
+                                        set: {
+                                            binding(for: index).durationMinutes.wrappedValue = $0
+                                            binding(for: index).countdownSeconds.wrappedValue = nil
+                                        }
+                                    ), in: 1...240)
+                                    .labelsHidden()
+                                    
+                                    Text("分钟")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                HStack(spacing: 6) {
+                                    Text("稍后提醒:")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                    
+                                    TextField("", value: binding(for: index).snoozeMinutes, formatter: Self.intFormatter)
                                         .textFieldStyle(.roundedBorder)
                                         .multilineTextAlignment(.trailing)
                                         .frame(width: 44)
-                                        
-                                        Stepper("", value: Binding(
-                                            get: { preset.blocks[index].countdownSeconds ?? 20 },
-                                            set: { preset.blocks[index].countdownSeconds = max(5, $0) }
-                                        ), in: 5...300)
-                                        .labelsHidden()
-                                    } else {
-                                        TextField("", value: binding(for: index).durationMinutes, formatter: Self.intFormatter)
-                                            .textFieldStyle(.roundedBorder)
-                                            .multilineTextAlignment(.trailing)
-                                            .frame(width: 44)
-                                        
-                                        Stepper("", value: binding(for: index).durationMinutes, in: 1...60)
-                                            .labelsHidden()
-                                    }
                                     
-                                    Picker("", selection: Binding(
-                                        get: { block.countdownSeconds != nil },
-                                        set: { isSec in
-                                            if isSec {
-                                                preset.blocks[index].countdownSeconds = 20
-                                            } else {
-                                                preset.blocks[index].countdownSeconds = nil
-                                            }
-                                        }
-                                    )) {
-                                        Text("分钟").tag(false)
-                                        Text("秒").tag(true)
-                                    }
-                                    .pickerStyle(.menu)
-                                    .frame(width: 65)
+                                    Stepper("", value: binding(for: index).snoozeMinutes, in: 1...60)
+                                        .labelsHidden()
+                                    
+                                    Text("分钟")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
                                 }
                             }
-                        }
-                        
-                        // (2) 正计时阶段递增报时配置（自由休息专属）
-                        if block.timingMode == .stopwatch {
+                            
+                            // (3) 到点提示音（独立通栏，绝不挤压截断）
+                            HStack(spacing: 6) {
+                                Text("到点提示音:")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                Picker("", selection: binding(for: index).soundName) {
+                                    ForEach(SoundManager.shared.allAvailableSounds()) { option in
+                                        Text(option.displayName).tag(option.identifier)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .frame(minWidth: 165)
+                                
+                                Button(action: {
+                                    SoundManager.shared.preview(soundName: preset.blocks[index].soundName)
+                                }) {
+                                    Image(systemName: "speaker.wave.2.fill")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.accentColor)
+                                }
+                                .buttonStyle(.plain)
+                                .help("试听声音")
+                                
+                                Spacer()
+                            }
+                            
+                            // (4) 提示文案
+                            HStack(spacing: 6) {
+                                Text("提示文案:")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                TextField("如：看远方 20 秒、喝水深呼吸...", text: binding(for: index).message)
+                                    .textFieldStyle(.roundedBorder)
+                                    .font(.system(size: 12))
+                                    .frame(maxWidth: .infinity)
+                            }
+                            
+                            // (5) 自动推进
+                            Toggle("休息结束后自动推进到下一步", isOn: binding(for: index).autoAdvance)
+                                .font(.system(size: 12))
+                        } else {
+                            // (2) 正计时自由休息专属：阶段轻报时
                             VStack(alignment: .leading, spacing: 8) {
-                                Toggle("开启阶段递增轻报时（纯声音不弹窗，计时不暂停）", isOn: binding(for: index).enableIncrementalChimes)
-                                    .font(.caption)
+                                Toggle("开启阶段轻报时（纯声音）", isOn: binding(for: index).enableIncrementalChimes)
+                                    .font(.system(size: 12))
                                 
                                 if block.enableIncrementalChimes {
                                     HStack(spacing: 14) {
                                         HStack(spacing: 6) {
                                             Text("起始阈值:")
-                                                .font(.caption)
+                                                .font(.system(size: 12, weight: .medium))
                                                 .foregroundColor(.secondary)
-                                            TextField("", value: binding(for: index).chimeStartMinutes, formatter: Self.intFormatter)
+                                            TextField("", value: Binding(
+                                                get: { block.chimeStartMinutes },
+                                                set: {
+                                                    let val = max(1, min(240, $0))
+                                                    binding(for: index).chimeStartMinutes.wrappedValue = val
+                                                    if binding(for: index).chimeEndMinutes.wrappedValue < val {
+                                                        binding(for: index).chimeEndMinutes.wrappedValue = val
+                                                    }
+                                                }
+                                            ), formatter: Self.intFormatter)
                                                 .textFieldStyle(.roundedBorder)
                                                 .multilineTextAlignment(.trailing)
-                                                .frame(width: 40)
-                                            Stepper("", value: binding(for: index).chimeStartMinutes, in: 1...120)
+                                                .frame(width: 48)
+                                            Stepper("", value: Binding(
+                                                get: { block.chimeStartMinutes },
+                                                set: {
+                                                    binding(for: index).chimeStartMinutes.wrappedValue = $0
+                                                    if binding(for: index).chimeEndMinutes.wrappedValue < $0 {
+                                                        binding(for: index).chimeEndMinutes.wrappedValue = $0
+                                                    }
+                                                }
+                                            ), in: 1...240)
                                                 .labelsHidden()
                                             Text("分钟")
-                                                .font(.caption)
+                                                .font(.system(size: 12))
                                                 .foregroundColor(.secondary)
                                         }
                                         
                                         HStack(spacing: 6) {
                                             Text("截止阈值:")
-                                                .font(.caption)
+                                                .font(.system(size: 12, weight: .medium))
                                                 .foregroundColor(.secondary)
-                                            TextField("", value: binding(for: index).chimeEndMinutes, formatter: Self.intFormatter)
+                                            TextField("", value: Binding(
+                                                get: { max(block.chimeStartMinutes, block.chimeEndMinutes) },
+                                                set: { binding(for: index).chimeEndMinutes.wrappedValue = max(block.chimeStartMinutes, min(480, $0)) }
+                                            ), formatter: Self.intFormatter)
                                                 .textFieldStyle(.roundedBorder)
                                                 .multilineTextAlignment(.trailing)
-                                                .frame(width: 40)
-                                            Stepper("", value: binding(for: index).chimeEndMinutes, in: 1...240)
+                                                .frame(width: 48)
+                                            Stepper("", value: Binding(
+                                                get: { max(block.chimeStartMinutes, block.chimeEndMinutes) },
+                                                set: { binding(for: index).chimeEndMinutes.wrappedValue = max(block.chimeStartMinutes, $0) }
+                                            ), in: 2...480)
                                                 .labelsHidden()
                                             Text("分钟")
-                                                .font(.caption)
+                                                .font(.system(size: 12))
                                                 .foregroundColor(.secondary)
                                         }
                                         
@@ -639,7 +708,7 @@ public struct PipelineFlowCanvasView: View {
                                     
                                     HStack(spacing: 6) {
                                         Text("到达截止阈值时:")
-                                            .font(.caption)
+                                            .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(.secondary)
                                         Picker("", selection: binding(for: index).chimeCutoffAction) {
                                             ForEach(CutoffAction.allCases, id: \.self) { action in
@@ -648,10 +717,10 @@ public struct PipelineFlowCanvasView: View {
                                         }
                                         .labelsHidden()
                                         .pickerStyle(.menu)
-                                        .frame(width: 220)
+                                        .frame(minWidth: 175)
                                     }
                                     
-                                    Text("💡 在 \(block.chimeStartMinutes)m ~ \(block.chimeEndMinutes)m 区间内，到达起始分钟及后续每 10 分钟按时段轻响对应次数（如 20分响2下、30分响3下）；到达截止阈值时执行上述设定。")
+                                    Text("💡 起始至截止区间内，每 10 分钟轻敲钟提示进度，到期执行截止动作。")
                                         .font(.system(size: 11))
                                         .foregroundColor(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -662,13 +731,11 @@ public struct PipelineFlowCanvasView: View {
                                 }
                             }
                             .padding(.vertical, 4)
-                        }
-                        
-                        // (3) 提示音与稍后提醒延时
-                        HStack(spacing: 12) {
+                            
+                            // (3) 报时声音
                             HStack(spacing: 6) {
-                                Text(block.timingMode == .countdown ? "提示音:" : "报时声音:")
-                                    .font(.caption)
+                                Text("报时声音:")
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.secondary)
                                 Picker("", selection: binding(for: index).soundName) {
                                     ForEach(SoundManager.shared.allAvailableSounds()) { option in
@@ -676,53 +743,33 @@ public struct PipelineFlowCanvasView: View {
                                     }
                                 }
                                 .pickerStyle(.menu)
-                                .frame(width: 140)
+                                .frame(minWidth: 165)
                                 
                                 Button(action: {
                                     SoundManager.shared.preview(soundName: preset.blocks[index].soundName)
                                 }) {
                                     Image(systemName: "speaker.wave.2.fill")
-                                        .font(.system(size: 11))
+                                        .font(.system(size: 12))
                                         .foregroundColor(.accentColor)
                                 }
                                 .buttonStyle(.plain)
                                 .help("试听声音")
+                                
+                                Spacer()
                             }
                             
-                            Spacer()
-                            
-                            // 稍后提醒（仅固定倒计时有效；自由正计时无固定终点自然流动，无需稍后提醒）
-                            if block.timingMode == .countdown {
+                            // (4) 截止弹窗文案
+                            if block.enableIncrementalChimes {
                                 HStack(spacing: 6) {
-                                    Text("稍后提醒:")
-                                        .font(.caption)
+                                    Text("截止弹窗文案:")
+                                        .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.secondary)
-                                    Picker("", selection: binding(for: index).snoozeMinutes) {
-                                        Text("3 分钟").tag(3)
-                                        Text("5 分钟 (默认)").tag(5)
-                                        Text("10 分钟").tag(10)
-                                    }
-                                    .pickerStyle(.menu)
-                                    .frame(width: 110)
+                                    TextField("准备开始下一轮专注", text: binding(for: index).message)
+                                        .textFieldStyle(.roundedBorder)
+                                        .font(.system(size: 12))
+                                        .frame(maxWidth: .infinity)
                                 }
                             }
-                        }
-                        
-                        // (3) 提示文案（通栏宽框）
-                        HStack(spacing: 6) {
-                            Text(block.timingMode == .stopwatch && block.enableIncrementalChimes ? "截止弹窗文案:" : "提示文案:")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            TextField(block.timingMode == .stopwatch ? "休息结束，准备开始下一轮专注" : "如：看远方 20 秒、喝水深呼吸...", text: binding(for: index).message)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.system(size: 12))
-                                .frame(maxWidth: .infinity)
-                        }
-                        
-                        // (4) 结束后自动推进（仅固定倒计时有效；正计时自由休息没有自然结束，隐藏此项）
-                        if block.timingMode == .countdown {
-                            Toggle("休息结束后自动推进到下一步", isOn: binding(for: index).autoAdvance)
-                                .font(.caption)
                         }
                     }
                     .padding(12)
@@ -841,7 +888,7 @@ public struct PipelineFlowCanvasView: View {
         let f = NumberFormatter()
         f.numberStyle = .none
         f.minimum = 1
-        f.maximum = 180
+        f.maximum = 999
         return f
     }()
     

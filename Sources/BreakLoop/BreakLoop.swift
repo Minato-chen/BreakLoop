@@ -187,13 +187,17 @@ struct BreakLoopApp: App {
 struct MenuBarLabelView: View {
     @ObservedObject var engine: TimerEngine
     let showTime: Bool
+    @AppStorage("BreakLoop.MenuBarShowStandbyText") private var showStandbyText: Bool = false
     
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             Image(systemName: menuBarIcon)
             if showTime {
-                Text(engine.menuBarText)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                let shouldShowText = (engine.mode != .standby) || showStandbyText
+                if shouldShowText && !engine.menuBarText.isEmpty {
+                    Text(engine.menuBarText)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                }
             }
         }
     }

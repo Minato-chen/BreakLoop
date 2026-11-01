@@ -17,7 +17,7 @@ public final class UpdateChecker: ObservableObject {
     @Published public var lastCheckTime: Date?
     
     public var currentVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.0.0"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.0.1"
     }
     public let repoURL = URL(string: "https://github.com/Minato-chen/BreakLoop")!
     public let releasesURL = URL(string: "https://github.com/Minato-chen/BreakLoop/releases")!

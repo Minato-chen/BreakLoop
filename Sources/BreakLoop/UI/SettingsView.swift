@@ -18,12 +18,11 @@ public struct PresetManagerView: View {
                 // 顶部：方案列表标题（固定高度 46，与右侧标题栏基线完全对齐）
                 HStack {
                     Text("方案列表 (\(presetStore.presets.count))")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.primary.opacity(0.85))
                     Spacer()
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 14)
                 .frame(height: 46)
                 .background(Color(NSColor.controlBackgroundColor))
                 
@@ -204,11 +203,20 @@ public struct GeneralPreferencesView: View {
     @AppStorage("BreakLoop.MenuBarShowStep") private var menuBarShowStep: Bool = false
     @AppStorage("BreakLoop.MenuBarShowSymbol") private var menuBarShowSymbol: Bool = true
     @AppStorage("BreakLoop.MenuBarSymbolStyle") private var menuBarSymbolStyle: String = "chevron"
+    @AppStorage("BreakLoop.MenuBarShowStandbyText") private var menuBarShowStandbyText: Bool = false
     
     @AppStorage("BreakLoop.AutoStandbyOnScreenSaver") private var autoStandbyOnScreenSaver: Bool = true
     @AppStorage("BreakLoop.AutoStandbyOnIdle") private var autoStandbyOnIdle: Bool = true
     @AppStorage("BreakLoop.IdleTimeoutMinutes") private var idleTimeoutMinutes: Int = 10
     @AppStorage("BreakLoop.PauseTimeoutMinutes") private var pauseTimeoutMinutes: Int = 5
+    
+    private static let intFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .none
+        f.minimum = 1
+        f.maximum = 999
+        return f
+    }()
     
     public init(engine: TimerEngine) {
         self.engine = engine
@@ -235,6 +243,9 @@ public struct GeneralPreferencesView: View {
                     
                     Toggle("显示计时方向符号", isOn: $menuBarShowSymbol)
                         .onChange(of: menuBarShowSymbol) { _ in engine.updateMenuBarText() }
+                    
+                    Toggle("待机时显示「待机」文字", isOn: $menuBarShowStandbyText)
+                        .onChange(of: menuBarShowStandbyText) { _ in engine.updateMenuBarText() }
                     
                     if menuBarShowSymbol {
                         Picker("符号样式", selection: $menuBarSymbolStyle) {
@@ -267,20 +278,33 @@ public struct GeneralPreferencesView: View {
                 
                 Toggle("鼠标键盘长时间无操作时自动待机", isOn: $autoStandbyOnIdle)
                 if autoStandbyOnIdle {
-                    Picker("无操作判定超时", selection: $idleTimeoutMinutes) {
-                        Text("5 分钟").tag(5)
-                        Text("10 分钟 (推荐)").tag(10)
-                        Text("15 分钟").tag(15)
-                        Text("20 分钟").tag(20)
+                    HStack {
+                        Text("无操作判定超时")
+                        Spacer()
+                        TextField("", value: $idleTimeoutMinutes, formatter: Self.intFormatter)
+                            .textFieldStyle(.roundedBorder)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 48)
+                        Stepper("", value: $idleTimeoutMinutes, in: 1...180)
+                            .labelsHidden()
+                        Text("分钟")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
                     }
                 }
                 
-                Picker("临时暂停超时自动转入待机", selection: $pauseTimeoutMinutes) {
-                    Text("3 分钟").tag(3)
-                    Text("5 分钟 (推荐)").tag(5)
-                    Text("10 分钟").tag(10)
-                    Text("15 分钟").tag(15)
-                    Text("从不超时").tag(0)
+                HStack {
+                    Text("临时暂停超时自动转入待机")
+                    Spacer()
+                    TextField("", value: $pauseTimeoutMinutes, formatter: Self.intFormatter)
+                        .textFieldStyle(.roundedBorder)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 48)
+                    Stepper("", value: $pauseTimeoutMinutes, in: 1...120)
+                        .labelsHidden()
+                    Text("分钟")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
                 }
             } header: {
                 Text("屏保与闲置保护").font(.headline)
@@ -300,8 +324,25 @@ public struct GeneralPreferencesView: View {
         let symCountdown = menuBarShowSymbol ? "<" : ""
         let symCountup = menuBarShowSymbol ? (menuBarSymbolStyle == "plus" ? "+" : ">") : ""
         
-        return HStack(spacing: 10) {
-            HStack(spacing: 4) {
+        return HStack(spacing: 8) {
+            // 待机状态预览（展示纯图标 vs 图标+文字）
+            HStack(spacing: 3) {
+                Image(systemName: "circle.dashed")
+                    .foregroundColor(.secondary)
+                if menuBarShowStandbyText {
+                    Text("待机")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color(NSColor.controlBackgroundColor))
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1))
+            
+            // 专注状态预览
+            HStack(spacing: 3) {
                 Image(systemName: "record.circle")
                     .foregroundColor(.blue)
                 Text("\(stepText)\(symCountdown)20m")
@@ -313,7 +354,8 @@ public struct GeneralPreferencesView: View {
             .clipShape(Capsule())
             .overlay(Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1))
             
-            HStack(spacing: 4) {
+            // 休息状态预览
+            HStack(spacing: 3) {
                 Image(systemName: "cup.and.saucer.fill")
                     .foregroundColor(.green)
                 Text("\(stepText)\(symCountup)5m")

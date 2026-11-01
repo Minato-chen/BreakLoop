@@ -379,7 +379,7 @@ public struct DashboardView: View {
         case .resting:
             return "[\(step)/\(total)] \(blockName)"
         case .standby:
-            return "待命中 · 下一步: \(blockName)"
+            return "待机中 · 下一步: \(blockName)"
         }
     }
     
