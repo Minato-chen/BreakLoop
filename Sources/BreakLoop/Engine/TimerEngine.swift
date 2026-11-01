@@ -352,32 +352,41 @@ public final class TimerEngine: ObservableObject {
     }
     
     // MARK: - 极简低频菜单栏文本计算
-    private func updateMenuBarText() {
+    public func updateMenuBarText() {
         let total = max(1, preset.blocks.count)
         let step = currentBlockIndex + 1
         
+        // 偏好设置：默认隐藏步数、保留方向符号 (< 与 >)
+        let showStep = userDefaults.object(forKey: "BreakLoop.MenuBarShowStep") as? Bool ?? false
+        let showSymbol = userDefaults.object(forKey: "BreakLoop.MenuBarShowSymbol") as? Bool ?? true
+        let symbolStyle = userDefaults.string(forKey: "BreakLoop.MenuBarSymbolStyle") ?? "chevron"
+        
+        let countdownSym = showSymbol ? "< " : ""
+        let countupSym = showSymbol ? (symbolStyle == "plus" ? "+ " : "> ") : ""
+        let stepPrefix = showStep ? "\(step)/\(total) " : ""
+        
         if isPaused {
-            menuBarText = "\(step)/\(total) 暂停中"
+            menuBarText = showStep ? "\(step)/\(total) 暂停中" : "暂停中"
             return
         }
         
         switch mode {
         case .standby:
-            menuBarText = "\(total)步"
+            menuBarText = showStep ? "\(total)步" : "待命"
         case .working:
             let mins = max(1, Int(ceil(Double(max(0, currentSeconds)) / 60.0)))
-            menuBarText = "\(step)/\(total) \(mins)m"
+            menuBarText = "\(stepPrefix)\(countdownSym)\(mins)m"
         case .resting:
             if let block = currentBlock, block.timingMode == .countdown {
                 if currentSeconds < 60 {
-                    menuBarText = "\(step)/\(total) \(currentSeconds)s"
+                    menuBarText = "\(stepPrefix)\(countdownSym)\(currentSeconds)s"
                 } else {
                     let mins = max(1, Int(ceil(Double(max(0, currentSeconds)) / 60.0)))
-                    menuBarText = "\(step)/\(total) \(mins)m"
+                    menuBarText = "\(stepPrefix)\(countdownSym)\(mins)m"
                 }
             } else {
                 let mins = max(1, currentSeconds / 60)
-                menuBarText = "\(step)/\(total) \(mins)m"
+                menuBarText = "\(stepPrefix)\(countupSym)\(mins)m"
             }
         }
     }

@@ -188,7 +188,7 @@ public struct DashboardView: View {
         }
     }
     
-    // MARK: - 核心操作按钮组（支持开始专注、直接休息与跳过）
+    // MARK: - 核心操作按钮组（流水线极简控制：主行动推进 + 暂停/继续）
     private var actionControlGroup: some View {
         HStack(spacing: 12) {
             Group {
@@ -198,58 +198,55 @@ public struct DashboardView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "cup.and.saucer.fill")
                             Text("进入休息")
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .bold))
                         }
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.white)
-                        .frame(width: 150, height: 42)
+                        .frame(width: 155, height: 42)
                         .background(Color.green)
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .help("完成本步专注，推进到下一步：休息")
                     
                 case .resting:
                     Button(action: { engine.advanceToNextBlock() }) {
                         HStack(spacing: 6) {
                             Image(systemName: "laptopcomputer")
                             Text("开始专注")
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .bold))
                         }
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.white)
-                        .frame(width: 150, height: 42)
+                        .frame(width: 155, height: 42)
                         .background(Color.blue)
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .help("完成本次休息，推进到下一步：专注")
                     
                 case .standby:
+                    let isNextWork = (engine.currentBlock?.type ?? .work) == .work
+                    let buttonTitle = isNextWork ? "开始专注" : "开始休息"
+                    let buttonIcon = isNextWork ? "play.fill" : "cup.and.saucer.fill"
+                    let buttonColor = isNextWork ? Color.accentColor : Color.green
+                    
                     HStack(spacing: 12) {
                         Button(action: { engine.startCurrentBlock() }) {
                             HStack(spacing: 6) {
-                                Image(systemName: "play.fill")
-                                Text("开始专注")
+                                Image(systemName: buttonIcon)
+                                Text(buttonTitle)
                             }
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(width: 140, height: 42)
-                            .background(Color.accentColor)
+                            .background(buttonColor)
                             .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
-                        
-                        Button(action: { engine.startRest() }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "cup.and.saucer.fill")
-                                Text("直接休息")
-                            }
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                            .padding(.horizontal, 14)
-                            .frame(height: 42)
-                            .background(Color(NSColor.controlBackgroundColor))
-                            .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .help("立即开启休息流程")
+                        .help(isNextWork ? "开启当前专注阶段" : "开启当前休息阶段")
                         
                         if engine.currentBlockIndex > 0 {
                             Button(action: { engine.resetCycleToBeginning() }) {
@@ -267,7 +264,7 @@ public struct DashboardView: View {
                 }
             }
             
-            // 暂停/继续控制
+            // 暂停/继续控制（仅运行态显示）
             if engine.mode != .standby {
                 Button(action: { engine.togglePause() }) {
                     Image(systemName: engine.isPaused ? "play.fill" : "pause.fill")
@@ -279,20 +276,6 @@ public struct DashboardView: View {
                 }
                 .buttonStyle(.plain)
                 .help(engine.isPaused ? "继续计时" : "临时暂停（超时自动转待机并回溯）")
-            }
-            
-            // 跳过本步
-            if engine.mode != .standby {
-                Button(action: { engine.advanceToNextBlock() }) {
-                    Image(systemName: "forward.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .frame(width: 40, height: 42)
-                        .background(Color(NSColor.controlBackgroundColor))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .help("跳过本步")
             }
         }
     }

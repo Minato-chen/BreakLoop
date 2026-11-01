@@ -200,7 +200,11 @@ public struct SettingsView: View {
 public struct GeneralPreferencesView: View {
     @ObservedObject var engine: TimerEngine
     @AppStorage("BreakLoop.LaunchAtLogin") private var launchAtLogin: Bool = false
-    @AppStorage("BreakLoop.MenuBarShowTime") private var menuBarShowTime: Bool = false
+    @AppStorage("BreakLoop.MenuBarShowTime") private var menuBarShowTime: Bool = true
+    @AppStorage("BreakLoop.MenuBarShowStep") private var menuBarShowStep: Bool = false
+    @AppStorage("BreakLoop.MenuBarShowSymbol") private var menuBarShowSymbol: Bool = true
+    @AppStorage("BreakLoop.MenuBarSymbolStyle") private var menuBarSymbolStyle: String = "chevron"
+    
     @AppStorage("BreakLoop.AutoStandbyOnScreenSaver") private var autoStandbyOnScreenSaver: Bool = true
     @AppStorage("BreakLoop.AutoStandbyOnIdle") private var autoStandbyOnIdle: Bool = true
     @AppStorage("BreakLoop.IdleTimeoutMinutes") private var idleTimeoutMinutes: Int = 10
@@ -217,10 +221,45 @@ public struct GeneralPreferencesView: View {
                     .onChange(of: launchAtLogin) { val in
                         LaunchAtLogin.setEnabled(val)
                     }
-                
-                Toggle("菜单栏显示倒计时进度", isOn: $menuBarShowTime)
             } header: {
                 Text("常规").font(.headline)
+            }
+            
+            Section {
+                Toggle("菜单栏显示时间与状态", isOn: $menuBarShowTime)
+                    .onChange(of: menuBarShowTime) { _ in engine.updateMenuBarText() }
+                
+                if menuBarShowTime {
+                    Toggle("显示循环步数 (如 1/2)", isOn: $menuBarShowStep)
+                        .onChange(of: menuBarShowStep) { _ in engine.updateMenuBarText() }
+                    
+                    Toggle("显示计时方向符号", isOn: $menuBarShowSymbol)
+                        .onChange(of: menuBarShowSymbol) { _ in engine.updateMenuBarText() }
+                    
+                    if menuBarShowSymbol {
+                        Picker("符号样式", selection: $menuBarSymbolStyle) {
+                            Text("< 倒计时 / > 正计时 (推荐)").tag("chevron")
+                            Text("< 倒计时 / + 正计时").tag("plus")
+                        }
+                        .onChange(of: menuBarSymbolStyle) { _ in engine.updateMenuBarText() }
+                    }
+                    
+                    // 实时模拟预览条
+                    HStack(spacing: 8) {
+                        Text("外观预览:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        menuBarPreviewPill
+                    }
+                    .padding(.top, 4)
+                }
+            } header: {
+                Text("菜单栏").font(.headline)
+            } footer: {
+                Text("默认采用紧凑设计（隐藏步数，保留方向符号），在菜单栏占用极小横向空间，且清晰区分正倒计时。")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
             
             Section {
@@ -254,6 +293,38 @@ public struct GeneralPreferencesView: View {
         .formStyle(.grouped)
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+    
+    private var menuBarPreviewPill: some View {
+        let stepText = menuBarShowStep ? "1/2 " : ""
+        let symCountdown = menuBarShowSymbol ? "< " : ""
+        let symCountup = menuBarShowSymbol ? (menuBarSymbolStyle == "plus" ? "+ " : "> ") : ""
+        
+        return HStack(spacing: 10) {
+            HStack(spacing: 4) {
+                Image(systemName: "record.circle")
+                    .foregroundColor(.blue)
+                Text("\(stepText)\(symCountdown)20m")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color(NSColor.controlBackgroundColor))
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1))
+            
+            HStack(spacing: 4) {
+                Image(systemName: "cup.and.saucer.fill")
+                    .foregroundColor(.green)
+                Text("\(stepText)\(symCountup)5m")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color(NSColor.controlBackgroundColor))
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1))
+        }
     }
 }
 

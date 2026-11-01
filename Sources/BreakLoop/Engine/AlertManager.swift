@@ -64,6 +64,10 @@ public final class AlertManager {
     
     public func dismiss() {
         SoundManager.shared.stop()
+        closePanel()
+    }
+    
+    public func closePanel() {
         alertWindowController?.close()
         alertWindowController = nil
     }
@@ -83,7 +87,8 @@ public final class AlertManager {
         onSnooze: @escaping () -> Void,
         onDismiss: @escaping () -> Void
     ) {
-        dismiss()
+        // 仅关闭前一个弹窗（若有），绝不停止刚刚触发播放的提示音
+        closePanel()
         
         let screenRect = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 800, height: 600)
         let width: CGFloat = 360

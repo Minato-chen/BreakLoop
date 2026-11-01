@@ -703,20 +703,12 @@ public struct PipelineFlowCanvasView: View {
         let isHovered = (hoveredConnectorId == id)
         
         return ZStack {
-            // 垂直向下箭头
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(Color.primary.opacity(0.14))
-                    .frame(width: 1.5, height: 8)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(isHovered ? .accentColor.opacity(0.8) : .primary.opacity(0.28))
-                Rectangle()
-                    .fill(Color.primary.opacity(0.14))
-                    .frame(width: 1.5, height: 8)
-            }
+            // 纯粹干净的垂直连接线（无重叠多余箭头）
+            Rectangle()
+                .fill(isHovered ? Color.accentColor.opacity(0.35) : Color.primary.opacity(0.12))
+                .frame(width: 1.5, height: 24)
             
-            // 纯粹的插入菜单（仅专注模块 / 休息模块）
+            // 纯粹精致的圆形插入菜单（限定为圆形尺寸，杜绝原生菜单矩形框残留）
             Menu {
                 Button(action: {
                     insertAction(FlowBlock.makeWork())
@@ -733,22 +725,24 @@ public struct PipelineFlowCanvasView: View {
                 ZStack {
                     Circle()
                         .fill(Color(NSColor.controlBackgroundColor))
-                        .frame(width: 18, height: 18)
+                        .frame(width: 20, height: 20)
                         .shadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 1)
                     Image(systemName: "plus")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundColor(isHovered ? .accentColor : .secondary)
                 }
                 .overlay(
-                    Circle().stroke(isHovered ? Color.accentColor : Color.primary.opacity(0.16), lineWidth: 1)
+                    Circle().stroke(isHovered ? Color.accentColor : Color.primary.opacity(0.18), lineWidth: 1.2)
                 )
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
+            .frame(width: 20, height: 20)
+            .contentShape(Circle())
             .help(tooltip)
             .onHover { h in hoveredConnectorId = h ? id : nil }
         }
-        .padding(.vertical, 1)
+        .padding(.vertical, 2)
     }
     
     // MARK: - 居中闭环“从头循环”节点

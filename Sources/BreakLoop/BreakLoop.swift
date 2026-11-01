@@ -108,7 +108,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 @main
 struct BreakLoopApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @AppStorage("BreakLoop.MenuBarShowTime") private var menuBarShowTime: Bool = false
+    @AppStorage("BreakLoop.MenuBarShowTime") private var menuBarShowTime: Bool = true
     
     var body: some Scene {
         // 菜单栏保留轻量控制入口

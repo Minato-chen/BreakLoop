@@ -351,12 +351,12 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(TimeFormatter.formatMinutesOnly(seconds: 60), "1m")
         XCTAssertEqual(TimeFormatter.formatMinutesOnly(seconds: 90), "2m")
         
-        // 2. 引擎菜单栏文本：无 + 或 < 等冗余符号
+        // 2. 引擎菜单栏文本：符号与步数定制验证
         let preset = Preset(
             name: "格式测试",
             blocks: [
                 FlowBlock.makeWork(name: "专注", minutes: 25),
-                FlowBlock.makeStopwatchRest(name: "正计息", targetSeconds: 20)
+                FlowBlock.makeStopwatchRest(name: "正计息")
             ]
         )
         let engine = TimerEngine(
@@ -366,21 +366,28 @@ final class BreakLoopTests: XCTestCase {
             nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
         )
         
-        // 待机状态
-        XCTAssertFalse(engine.menuBarText.contains("<"))
-        XCTAssertFalse(engine.menuBarText.contains("+"))
+        // 待机状态默认：待命 (隐藏步数)
+        XCTAssertEqual(engine.menuBarText, "待命")
         
-        // 工作状态
+        // 工作状态默认：< 25m (隐藏步数，倒计时带 <)
         engine.startCurrentBlock()
-        XCTAssertFalse(engine.menuBarText.contains("<"))
-        XCTAssertFalse(engine.menuBarText.contains("+"))
+        XCTAssertEqual(engine.menuBarText, "< 25m")
         
         // 推进到自由正计时休息
         engine.advanceToNextBlock()
-        simulatedDate.addTimeInterval(45)
+        simulatedDate.addTimeInterval(65)
         engine.tick()
-        XCTAssertFalse(engine.menuBarText.contains("<"))
-        XCTAssertFalse(engine.menuBarText.contains("+"))
+        XCTAssertEqual(engine.menuBarText, "> 1m")
+        
+        // 开启显示步数
+        mockUserDefaults.set(true, forKey: "BreakLoop.MenuBarShowStep")
+        engine.updateMenuBarText()
+        XCTAssertEqual(engine.menuBarText, "2/2 > 1m")
+        
+        // 关闭显示符号
+        mockUserDefaults.set(false, forKey: "BreakLoop.MenuBarShowSymbol")
+        engine.updateMenuBarText()
+        XCTAssertEqual(engine.menuBarText, "2/2 1m")
     }
     
     // MARK: - 测试 10: 工作模块强制倒计时与固定属性守卫
@@ -578,7 +585,7 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(engine.mode, .resting)
         XCTAssertEqual(engine.currentBlock?.name, "看远方")
         XCTAssertEqual(engine.currentSeconds, 20)
-        XCTAssertEqual(engine.menuBarText, "2/2 20s")
+        XCTAssertEqual(engine.menuBarText, "< 20s")
         
         // 走过 10 秒
         simulatedDate.addTimeInterval(10)
