@@ -583,15 +583,15 @@ public struct StatsView: View {
     private var monthCalendarGridView: some View {
         let rowCount = max(1, (monthCells.count + 6) / 7)
         let isSixRows = rowCount >= 6
-        // 自适应高度：6 行时压缩单格高度为 38pt，5 行时为 46pt，确保两者的整体网格高度完全一致（约 250pt），绝不挤压顶部 UI
-        let cellHeight: CGFloat = isSixRows ? 38 : 46
-        let ringSize: CGFloat = isSixRows ? 25 : 29
-        let ringLineWidth: CGFloat = isSixRows ? 2.6 : 3.0
-        let gridSpacing: CGFloat = isSixRows ? 4 : 6
+        // 自适应大号高度：6 行时为 50pt，5 行时为 60pt，整体高度饱满均衡（约 330pt），充分利用纵向空间告别拥挤
+        let cellHeight: CGFloat = isSixRows ? 50 : 60
+        let ringSize: CGFloat = isSixRows ? 29 : 34
+        let ringLineWidth: CGFloat = isSixRows ? 3.0 : 3.4
+        let gridSpacing: CGFloat = isSixRows ? 6 : 8
         let columns = Array(repeating: GridItem(.flexible(), spacing: gridSpacing), count: 7)
         let weekdaySymbols = ["一", "二", "三", "四", "五", "六", "日"]
         
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("月度专注日历 (对比整月每天)")
                     .font(.headline)
@@ -627,7 +627,7 @@ public struct StatsView: View {
                             currentScope = .day
                         }
                     }) {
-                        VStack(spacing: isSixRows ? 0 : 2) {
+                        VStack(spacing: isSixRows ? 2 : 3) {
                             ZStack {
                                 if cell.isCurrentMonth {
                                     DualArcRingView(
@@ -641,17 +641,17 @@ public struct StatsView: View {
                                 }
                                 
                                 Text("\(cell.dayNumber)")
-                                    .font(.system(size: isSixRows ? 10 : 11, weight: .bold, design: .rounded))
+                                    .font(.system(size: isSixRows ? 11 : 12, weight: .bold, design: .rounded))
                                     .foregroundColor(cell.isCurrentMonth ? .primary : .secondary.opacity(0.3))
                             }
                             
                             if cell.isCurrentMonth && cell.workMinutes > 0 {
                                 Text("\(cell.workMinutes)m")
-                                    .font(.system(size: isSixRows ? 8 : 9, weight: .bold, design: .rounded))
+                                    .font(.system(size: isSixRows ? 9 : 10, weight: .bold, design: .rounded))
                                     .foregroundColor(Color(red: 0.05, green: 0.52, blue: 1.0))
                             } else {
                                 Text("-")
-                                    .font(.system(size: isSixRows ? 8 : 9))
+                                    .font(.system(size: isSixRows ? 9 : 10))
                                     .foregroundColor(.clear)
                             }
                         }
@@ -660,9 +660,9 @@ public struct StatsView: View {
                         .background(
                             cell.isCurrentMonth ? Color(NSColor.controlBackgroundColor) : Color.clear
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .stroke(cell.isToday ? Color.accentColor : Color.primary.opacity(0.06), lineWidth: cell.isToday ? 2 : 1)
                         )
                     }
