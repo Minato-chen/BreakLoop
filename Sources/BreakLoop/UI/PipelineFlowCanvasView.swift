@@ -92,33 +92,39 @@ public struct PipelineFlowCanvasView: View {
     
     // MARK: - 顶部标题区
     private var headerSection: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "square.stack.3d.down.right.fill")
-                    .foregroundColor(.accentColor)
-                TextField("方案名称", text: $preset.name)
-                    .font(.system(size: 15, weight: .bold))
-                    .textFieldStyle(.plain)
-                    .frame(maxWidth: 180)
-                    .disabled(isPresetRunning)
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: isPresetRunning ? 3 : 0) {
+                HStack(spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.stack.3d.down.right.fill")
+                            .foregroundColor(.accentColor)
+                        TextField("方案名称", text: $preset.name)
+                            .font(.system(size: 15, weight: .bold))
+                            .textFieldStyle(.plain)
+                            .frame(maxWidth: 180)
+                            .disabled(isPresetRunning)
+                    }
+                    
+                    Text("(\(preset.blocks.count) 步循环)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                if isPresetRunning {
+                    HStack(spacing: 4) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 10))
+                        Text("运行中无法更改")
+                            .font(.system(size: 11))
+                    }
+                    .foregroundColor(.secondary)
+                }
             }
-            
-            Text("(\(preset.blocks.count) 步循环)")
-                .font(.caption)
-                .foregroundColor(.secondary)
             
             Spacer()
             
             if isPresetRunning {
                 HStack(spacing: 8) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 10))
-                        Text("运行中无法更改")
-                            .font(.caption)
-                    }
-                    .foregroundColor(.secondary)
-                    
                     Text("运行中 [\(engine.currentBlockIndex + 1)/\(preset.blocks.count)]")
                         .font(.caption)
                         .fontWeight(.semibold)
