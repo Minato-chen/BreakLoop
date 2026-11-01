@@ -836,4 +836,58 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(engine.currentBlockIndex, 1)
         XCTAssertEqual(engine.currentBlock?.name, "休息")
     }
+    
+    // MARK: - 测试 21: 方案 A（稍后提醒 = 专注加时 5 分钟，随后休息时间不受扣减）
+    func testSnoozeExtendsWorkAndPreservesFullRest() {
+        let preset = Preset(
+            name: "SnoozeOptionATest",
+            blocks: [
+                FlowBlock.makeWork(name: "专注", minutes: 20),
+                FlowBlock.makeCountdownRest(name: "短休", minutes: 5)
+            ]
+        )
+        var alertCount = 0
+        var lastAlert: AlertTriggerEvent?
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        engine.onAlertTriggered = { event in
+            alertCount += 1
+            lastAlert = event
+        }
+        
+        // 1. 启动专注
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.mode, .working)
+        
+        // 20 分钟时间到
+        simulatedDate.addTimeInterval(20 * 60)
+        engine.tick()
+        XCTAssertEqual(alertCount, 1)
+        guard let alert1 = lastAlert else { return XCTFail() }
+        
+        // 2. 用户点击「稍后 5 分钟」（触发 onSnooze 回调）
+        engine.snooze(minutes: alert1.snoozeMinutes, rewindingTo: alert1.autoAdvanced ? alert1.blockIndex : nil)
+        
+        // 验证：模式切回工作态，倒计时 5 分钟（300秒），索引回溯至专注块
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        XCTAssertEqual(engine.currentSeconds, 5 * 60)
+        
+        // 3. 走过 5 分钟加时
+        simulatedDate.addTimeInterval(5 * 60)
+        engine.tick()
+        
+        // 验证：加时结束，再次弹窗提醒休息
+        XCTAssertEqual(alertCount, 2)
+        XCTAssertEqual(lastAlert?.actionType, .workCompleted)
+        
+        // 验证：由于开启了自动推进，此时已进入休息，且休息拥有满额 5 分钟（300秒），未被扣除一秒
+        XCTAssertEqual(engine.mode, .resting)
+        XCTAssertEqual(engine.currentBlockIndex, 1)
+        XCTAssertEqual(engine.currentSeconds, 5 * 60)
+    }
 }

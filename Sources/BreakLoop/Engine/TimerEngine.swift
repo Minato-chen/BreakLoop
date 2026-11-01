@@ -379,6 +379,11 @@ public final class TimerEngine: ObservableObject {
             currentBlockIndex = idx
         }
         let now = nowProvider()
+        // 若此前处于工作态且未结算（如未开启自动推进模式），先保存前一段专注会话
+        if mode == .working, sessionStartDate != nil {
+            closeCurrentSession(endedAt: now, reason: .completed)
+        }
+        sessionStartDate = now
         mode = .working
         targetSeconds = minutes * 60
         currentSeconds = targetSeconds
