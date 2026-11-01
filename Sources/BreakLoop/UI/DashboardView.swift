@@ -342,7 +342,7 @@ public struct DashboardView: View {
             if let block = engine.currentBlock, block.timingMode == .countdown {
                 return TimeFormatter.formatMinutesOnly(seconds: engine.currentSeconds)
             } else {
-                return "+\(max(1, engine.currentSeconds / 60))m"
+                return "+\(max(0, engine.currentSeconds / 60))m"
             }
         case .standby:
             if let block = engine.currentBlock {

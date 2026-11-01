@@ -446,7 +446,7 @@ public final class TimerEngine: ObservableObject {
                     menuBarText = "\(stepPrefix)\(countdownSym)\(mins)m"
                 }
             } else {
-                let mins = max(1, currentSeconds / 60)
+                let mins = max(0, currentSeconds / 60)
                 menuBarText = "\(stepPrefix)\(countupSym)\(mins)m"
             }
         }

@@ -52,20 +52,15 @@ public enum InterruptRecovery: String, Codable, CaseIterable {
     
     public var displayName: String {
         switch self {
-        case .resetCurrent: return "重置本步（重新倒数）"
-        case .resume: return "断点续传（继续剩余时间）"
-        case .advanceNext: return "推进至下一步（开始新阶段）"
-        case .resetCycle: return "重置整轮（回到第1步）"
+        case .resetCurrent: return "重置本步"
+        case .resume: return "断点续传"
+        case .advanceNext: return "推进至下一步"
+        case .resetCycle: return "重置整轮"
         }
     }
     
     public func displayName(for type: FlowBlockType) -> String {
-        switch self {
-        case .resetCurrent: return "重置本步（重新倒数）"
-        case .resume: return "断点续传（继续剩余时间）"
-        case .advanceNext: return (type == .work) ? "推进至下一步（进入休息）" : "推进至下一步（开始专注）"
-        case .resetCycle: return "重置整轮（回到第1步）"
-        }
+        return displayName
     }
 }
 

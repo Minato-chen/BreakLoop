@@ -890,4 +890,47 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(engine.currentBlockIndex, 1)
         XCTAssertEqual(engine.currentSeconds, 5 * 60)
     }
+    
+    // MARK: - 测试 22: 正计时向下取整（0~59秒显示 > 0m）与打断恢复文案无括号极简化
+    func testStopwatchFloorRoundingAndCleanRecoveryNames() {
+        // 1. 文案测试：打断恢复策略移除冗余括号与硬编码
+        XCTAssertEqual(InterruptRecovery.resetCurrent.displayName, "重置本步")
+        XCTAssertEqual(InterruptRecovery.resume.displayName, "断点续传")
+        XCTAssertEqual(InterruptRecovery.advanceNext.displayName, "推进至下一步")
+        XCTAssertEqual(InterruptRecovery.resetCycle.displayName, "重置整轮")
+        
+        // 即使下一步也是休息，仍然通用表达为“推进至下一步”
+        XCTAssertEqual(InterruptRecovery.advanceNext.displayName(for: .rest), "推进至下一步")
+        XCTAssertEqual(InterruptRecovery.advanceNext.displayName(for: .work), "推进至下一步")
+        
+        // 2. 正计时取整逻辑测试：
+        let preset = Preset(
+            name: "StopwatchFloorTest",
+            blocks: [
+                FlowBlock.makeStopwatchRest(name: "自由休息")
+            ]
+        )
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.mode, .resting)
+        
+        // 刚刚开始走时 0 秒 -> > 0m
+        engine.tick()
+        XCTAssertEqual(engine.menuBarText, "> 0m")
+        
+        // 走过 50 秒（截图中的真实场景）-> 依然是 > 0m（向下取整，绝不误显为 > 1m）
+        simulatedDate.addTimeInterval(50)
+        engine.tick()
+        XCTAssertEqual(engine.menuBarText, "> 0m")
+        
+        // 走过满 60 秒 -> > 1m
+        simulatedDate.addTimeInterval(10)
+        engine.tick()
+        XCTAssertEqual(engine.menuBarText, "> 1m")
+    }
 }

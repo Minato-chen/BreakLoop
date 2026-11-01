@@ -125,18 +125,28 @@ struct BreakLoopApp: App {
                 }
             )
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: menuBarIcon)
-                if menuBarShowTime {
-                    Text(appDelegate.engine.menuBarText)
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                }
+            MenuBarLabelView(engine: appDelegate.engine, showTime: menuBarShowTime)
+        }
+    }
+}
+
+/// 菜单栏图标与文字响应视图（直接绑定 @ObservedObject，确保模式或倒计时变化时 0 延迟即时重绘）
+struct MenuBarLabelView: View {
+    @ObservedObject var engine: TimerEngine
+    let showTime: Bool
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: menuBarIcon)
+            if showTime {
+                Text(engine.menuBarText)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
             }
         }
     }
     
     private var menuBarIcon: String {
-        switch appDelegate.engine.mode {
+        switch engine.mode {
         case .working:
             return "record.circle"       // 专注中：聚焦环
         case .resting:
