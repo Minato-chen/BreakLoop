@@ -253,8 +253,12 @@ public final class TimerEngine: ObservableObject {
                 }
             } else {
                 targetSeconds = 0
-                currentSeconds = shouldResumeSavedSeconds ? (savedRemainingSeconds ?? 0) : 0
+                let resumedSecs = shouldResumeSavedSeconds ? (savedRemainingSeconds ?? 0) : 0
+                currentSeconds = resumedSecs
                 targetEndDate = nil
+                if resumedSecs > 0 {
+                    sessionStartDate = now.addingTimeInterval(-Double(resumedSecs))
+                }
             }
         }
         savedRemainingSeconds = nil

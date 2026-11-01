@@ -232,21 +232,25 @@ public struct DashboardView: View {
                     .help("完成本步专注，推进到下一步：休息")
                     
                 case .resting:
+                    let isNextWork = (engine.nextBlock?.type ?? .work) == .work
+                    let nextTitle = isNextWork ? "开始专注" : (engine.nextBlock?.name.isEmpty == false ? "进入\(engine.nextBlock!.name)" : "推进至下一步")
+                    let nextIcon = isNextWork ? "laptopcomputer" : "cup.and.saucer.fill"
+                    let nextColor: Color = isNextWork ? .blue : .green
                     Button(action: { engine.advanceToNextBlock() }) {
                         HStack(spacing: 6) {
-                            Image(systemName: "laptopcomputer")
-                            Text("开始专注")
+                            Image(systemName: nextIcon)
+                            Text(nextTitle)
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 12, weight: .bold))
                         }
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(width: 155, height: 42)
-                        .background(Color.blue)
+                        .background(nextColor)
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
-                    .help("完成本次休息，推进到下一步：专注")
+                    .help(isNextWork ? "完成本次休息，推进到下一步：专注" : "推进到下一个休息步骤")
                     
                 case .standby:
                     let isNextWork = (engine.currentBlock?.type ?? .work) == .work
@@ -291,7 +295,7 @@ public struct DashboardView: View {
                     Image(systemName: engine.isPaused ? "play.fill" : "pause.fill")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(engine.isPaused ? .orange : .primary)
-                        .frame(width: 40, height: 42)
+                        .frame(width: 42, height: 42)
                         .background(Color(NSColor.controlBackgroundColor))
                         .clipShape(Circle())
                 }

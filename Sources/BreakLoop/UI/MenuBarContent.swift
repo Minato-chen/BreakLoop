@@ -108,9 +108,11 @@ public struct MenuBarContent: View {
         case .working:
             return "进入休息"
         case .resting:
-            return "开始专注"
+            let isNextWork = (engine.nextBlock?.type ?? .work) == .work
+            return isNextWork ? "开始专注" : "推进至下一步"
         case .standby:
-            return "开始专注"
+            let isNextWork = (engine.currentBlock?.type ?? .work) == .work
+            return isNextWork ? "开始专注" : "开始休息"
         }
     }
     
@@ -126,7 +128,8 @@ public struct MenuBarContent: View {
             if let block = engine.currentBlock, block.timingMode == .countdown {
                 return "[\(step)/\(total)] \(blockName) · 剩余 \(TimeFormatter.formatMinutesOnly(seconds: engine.currentSeconds))"
             } else {
-                return "[\(step)/\(total)] \(blockName) · 已休 \(max(1, engine.currentSeconds / 60))m"
+                let mins = max(0, engine.currentSeconds / 60)
+                return "[\(step)/\(total)] \(blockName) · 已休 \(mins)m"
             }
         case .standby:
             return "待机中 · 下一步: [1/\(total)] \(engine.preset.blocks.first?.name ?? "")"

@@ -1001,4 +1001,51 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(engine.currentBlock?.type, .rest)
         XCTAssertEqual(engine.currentSeconds, 0)
     }
+    
+    // MARK: - 测试 24: 自由休息正计时在「断点续传」策略下待机唤醒后秒数无缝累加（不被置零）
+    func testStopwatchResumePreservesElapsedSeconds() {
+        var preset = Preset(
+            name: "StopwatchResumeTest",
+            blocks: [
+                FlowBlock.makeStopwatchRest(name: "自由大休", targetSeconds: 0)
+            ]
+        )
+        // 设置打断恢复策略为断点续传
+        preset.restInterruptRecovery = .resume
+        
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        
+        // 1. 开始自由休息
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.mode, .resting)
+        
+        // 走过 300 秒（5 分钟）
+        simulatedDate.addTimeInterval(300)
+        engine.tick()
+        XCTAssertEqual(engine.currentSeconds, 300)
+        
+        // 2. 临时进入待机（模拟离开电脑）
+        engine.enterStandby(reason: .manual)
+        XCTAssertEqual(engine.mode, .standby)
+        
+        // 待机中度过 10 分钟
+        simulatedDate.addTimeInterval(600)
+        
+        // 3. 唤醒并恢复（重新点击开始）
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.mode, .resting)
+        XCTAssertEqual(engine.currentSeconds, 300)
+        
+        // 走过 1 秒后 tick
+        simulatedDate.addTimeInterval(1)
+        engine.tick()
+        
+        // 核心验证：秒数应当为 301 秒，绝不能被重置为 1 秒！
+        XCTAssertEqual(engine.currentSeconds, 301)
+    }
 }
