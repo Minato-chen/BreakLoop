@@ -16,7 +16,7 @@ public final class UpdateChecker: ObservableObject {
     @Published public var status: UpdateStatus = .idle
     @Published public var lastCheckTime: Date?
     
-    public let currentVersion = "2.0.0"
+    public let currentVersion = "1.0.0"
     public let repoURL = URL(string: "https://github.com/Minato-chen/BreakLoop")!
     public let releasesURL = URL(string: "https://github.com/Minato-chen/BreakLoop/releases")!
     
