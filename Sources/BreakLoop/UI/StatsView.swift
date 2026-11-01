@@ -395,47 +395,46 @@ public struct StatsView: View {
                     }
                 }
                 
-                // 24 个小时圆环横向滚动排布
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(dayHoursActivity) { hour in
-                            VStack(spacing: 4) {
-                                Text(String(format: "%02d", hour.hour))
-                                    .font(.system(size: 9, design: .monospaced))
-                                    .foregroundColor(.secondary)
-                                
-                                DualArcRingView(
-                                    workMinutes: Double(hour.workMinutes),
-                                    restMinutes: Double(hour.restMinutes),
-                                    maxMinutes: 60.0,
-                                    size: 32,
-                                    lineWidth: 3.5,
-                                    showTrack: true
-                                )
-                                
-                                if hour.workMinutes > 0 || hour.restMinutes > 0 {
-                                    Text("\(hour.workMinutes)m")
-                                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                                        .foregroundColor(hour.workMinutes > 0 ? Color(red: 0.05, green: 0.52, blue: 1.0) : Color(red: 0.18, green: 0.82, blue: 0.38))
-                                } else {
-                                    Text("-")
-                                        .font(.system(size: 9))
-                                        .foregroundColor(.secondary.opacity(0.3))
-                                }
-                            }
-                            .frame(width: 36)
-                            .padding(.vertical, 4)
-                            .background(hoveredDayHour?.id == hour.id ? Color.primary.opacity(0.06) : Color.clear)
-                            .cornerRadius(6)
-                            .onHover { isH in
-                                if isH { hoveredDayHour = hour }
-                                else if hoveredDayHour?.id == hour.id { hoveredDayHour = nil }
+                // 24 个小时圆环：12 个一行，排成两行（00~11 上午，12~23 下午）
+                let hourColumns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 12)
+                LazyVGrid(columns: hourColumns, spacing: 6) {
+                    ForEach(dayHoursActivity) { hour in
+                        VStack(spacing: 2) {
+                            Text(String(format: "%02d", hour.hour))
+                                .font(.system(size: 8.5, design: .monospaced))
+                                .foregroundColor(.secondary)
+                            
+                            DualArcRingView(
+                                workMinutes: Double(hour.workMinutes),
+                                restMinutes: Double(hour.restMinutes),
+                                maxMinutes: 60.0,
+                                size: 26,
+                                lineWidth: 2.8,
+                                showTrack: true
+                            )
+                            
+                            if hour.workMinutes > 0 || hour.restMinutes > 0 {
+                                Text("\(hour.workMinutes)m")
+                                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                                    .foregroundColor(hour.workMinutes > 0 ? Color(red: 0.05, green: 0.52, blue: 1.0) : Color(red: 0.18, green: 0.82, blue: 0.38))
+                                    .lineLimit(1)
+                            } else {
+                                Text("-")
+                                    .font(.system(size: 8))
+                                    .foregroundColor(.secondary.opacity(0.3))
                             }
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 3)
+                        .background(hoveredDayHour?.id == hour.id ? Color.primary.opacity(0.08) : Color.clear)
+                        .cornerRadius(5)
+                        .onHover { isH in
+                            if isH { hoveredDayHour = hour }
+                            else if hoveredDayHour?.id == hour.id { hoveredDayHour = nil }
+                        }
                     }
-                    .padding(.horizontal, 2)
-                    .padding(.vertical, 4)
                 }
+                .padding(.vertical, 2)
             }
             .padding(12)
             .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
@@ -678,7 +677,7 @@ public struct StatsView: View {
     
     // MARK: - 4. 年视图（对比 12 个月度圆环，指上去查看精确数值，点击穿透至月视图）
     private var yearContributionView: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("年度 12 个月度圆环对比")
                     .font(.headline)
@@ -695,51 +694,50 @@ public struct StatsView: View {
                 }
             }
             
-            let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 4)
-            LazyVGrid(columns: columns, spacing: 12) {
+            let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 4)
+            LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(yearMonthsData) { item in
                     Button(action: {
                         dateAnchor = item.startDate
                         currentScope = .month
                     }) {
-                        VStack(spacing: 8) {
-                            Text(item.monthLabel)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.primary)
-                            
+                        VStack(spacing: 5) {
                             ZStack {
                                 DualArcRingView(
                                     workMinutes: item.workHours * 60,
                                     restMinutes: item.restHours * 60,
                                     maxMinutes: 160.0 * 60.0, // 满环 160 小时
-                                    size: 56,
-                                    lineWidth: 5.5,
+                                    size: 46,
+                                    lineWidth: 4.5,
                                     showTrack: true
                                 )
                                 
-                                Text(item.monthLabel.replacingOccurrences(of: "月", with: ""))
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                                    .foregroundColor(.secondary)
+                                Text(item.monthLabel)
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundColor(.primary)
                             }
                             
-                            VStack(spacing: 2) {
+                            VStack(spacing: 1) {
                                 Text("\(Int(round(item.workHours)))h 专注")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .foregroundColor(item.workHours > 0 ? Color(red: 0.05, green: 0.52, blue: 1.0) : .secondary.opacity(0.4))
                                 
                                 if item.restHours > 0 {
                                     Text("\(Int(round(item.restHours)))h 休息")
-                                        .font(.system(size: 9, design: .rounded))
+                                        .font(.system(size: 8.5, design: .rounded))
                                         .foregroundColor(Color(red: 0.18, green: 0.82, blue: 0.38))
+                                } else {
+                                    Text(" ")
+                                        .font(.system(size: 8.5))
                                 }
                             }
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 8)
                         .background(Color(NSColor.controlBackgroundColor))
-                        .cornerRadius(10)
+                        .cornerRadius(8)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: 8)
                                 .stroke(hoveredYearMonth?.id == item.id ? Color.accentColor : Color.primary.opacity(0.06), lineWidth: 1)
                         )
                     }
@@ -753,7 +751,7 @@ public struct StatsView: View {
                     }
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 2)
             
             Spacer(minLength: 0)
         }
