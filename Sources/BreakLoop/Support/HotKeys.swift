@@ -14,6 +14,7 @@ public final class HotKeyManager {
     
     public var onAction: ((HotKeyAction) -> Void)?
     private var hotKeyRefs: [EventHotKeyRef] = []
+    private var eventHandlerRef: EventHandlerRef?
     public private(set) var isRegistered: Bool = false
     
     public static var isEnabledInUserDefaults: Bool {
@@ -66,7 +67,7 @@ public final class HotKeyManager {
             1,
             &eventType,
             nil,
-            nil
+            &eventHandlerRef
         )
         
         // 注册默认组合快捷键：
@@ -93,6 +94,10 @@ public final class HotKeyManager {
             UnregisterEventHotKey(ref)
         }
         hotKeyRefs.removeAll()
+        if let handler = eventHandlerRef {
+            RemoveEventHandler(handler)
+            eventHandlerRef = nil
+        }
         isRegistered = false
     }
 }

@@ -1048,4 +1048,91 @@ final class BreakLoopTests: XCTestCase {
         // 核心验证：秒数应当为 301 秒，绝不能被重置为 1 秒！
         XCTAssertEqual(engine.currentSeconds, 301)
     }
+    
+    // MARK: - 测试 25: autoAdvance: false 时弹窗超时判定防僵死（用户赶工时自动顺延）
+    func testAutoAdvanceFalseAlertTimeoutDoesNotDeadlock() {
+        let userIdleSeconds: Double = 10.0 // 模拟用户一直在键盘打字赶工（活跃中，非闲置）
+        
+        let preset = Preset(
+            name: "ManualAdvanceTest",
+            blocks: [
+                FlowBlock(type: .work, name: "专注", durationMinutes: 1, autoAdvance: false, snoozeMinutes: 5),
+                FlowBlock.makeCountdownRest(name: "短休", minutes: 5)
+            ]
+        )
+        
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() },
+            idleSecondsProvider: { userIdleSeconds }
+        )
+        
+        // 1. 启动专注并走完 1 分钟
+        engine.startCurrentBlock()
+        simulatedDate.addTimeInterval(60)
+        engine.tick()
+        
+        // 验证：此时停留在 0 秒等待用户响应
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertEqual(engine.currentSeconds, 0)
+        
+        // 2. 模拟 3 分钟（180 秒）无点击，但用户在键盘打字（idle = 10s < 60s）
+        simulatedDate.addTimeInterval(180)
+        engine.tick()
+        
+        // 验证：绝不能永久停死在 0 秒！必须自动顺延 5 分钟（300 秒）工作倒计时
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        XCTAssertEqual(engine.currentSeconds, 300)
+        
+        // 走过 30 秒，倒计时正常扣减
+        simulatedDate.addTimeInterval(30)
+        engine.tick()
+        XCTAssertEqual(engine.currentSeconds, 270)
+    }
+    
+    // MARK: - 测试 26: 正常完成或超时完结进入待机必定推进到下一步（不受打断恢复策略干扰）
+    func testCompletedAndRestTimeoutAdvanceNextRegardlessOfResumeRecovery() {
+        var preset = Preset(
+            name: "CompletedAdvanceTest",
+            blocks: [
+                FlowBlock.makeWork(name: "工作 1", minutes: 20),
+                FlowBlock.makeCountdownRest(name: "休息 1", minutes: 5)
+            ]
+        )
+        // 恢复策略特意设置为 resume（断点续传）
+        preset.workInterruptRecovery = .resume
+        preset.restInterruptRecovery = .resume
+        
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        
+        // 1. 开启工作 1
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        
+        // 2. 模拟以「正常完成」原因进入待机（例如盒盖唤醒检测到已在盒盖期间完成）
+        engine.enterStandby(reason: .completed)
+        
+        // 验证：虽然策略是 resume，但因为是「已完成」，必须推进到第 1 步休息！绝不能停在工作 1
+        XCTAssertEqual(engine.mode, .standby)
+        XCTAssertEqual(engine.currentBlockIndex, 1)
+        XCTAssertEqual(engine.currentBlock?.name, "休息 1")
+        
+        // 3. 启动休息 1 并模拟休息超时完结
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.currentBlockIndex, 1)
+        engine.enterStandby(reason: .restTimeout)
+        
+        // 验证：休息完结后必须推进到下一轮大循环的第 0 步工作！
+        XCTAssertEqual(engine.mode, .standby)
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        XCTAssertEqual(engine.currentBlock?.name, "工作 1")
+    }
 }

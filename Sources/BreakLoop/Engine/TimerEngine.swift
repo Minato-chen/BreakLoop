@@ -318,16 +318,10 @@ public final class TimerEngine: ObservableObject {
         isLongRest = false
         lastRecordedMinute = -1
         
-        // 区分专注被打断 vs 休息被打断的不同恢复策略
-        let recovery: InterruptRecovery
-        if previousMode == .resting || interruptedBlock?.type == .rest {
-            recovery = preset.restInterruptRecovery
-        } else {
-            recovery = preset.workInterruptRecovery
-        }
-        
-        switch recovery {
-        case .advanceNext:
+        // 区分异常打断 vs 正常完成/超时完结
+        // 打断恢复策略（Interrupt Recovery）仅适用于中途被打断（手动待机、锁屏、闲置超时等）
+        // 若当前步骤是正常完成（.completed）或超时完结（.restTimeout），必须推进至下一步骤，绝不可重置或续传刚刚已完成的步骤
+        if reason == .completed || reason == .restTimeout {
             let nextIndex = currentBlockIndex + 1
             if nextIndex >= preset.blocks.count {
                 incrementCompletedCycles()
@@ -336,13 +330,32 @@ public final class TimerEngine: ObservableObject {
                 currentBlockIndex = nextIndex
             }
             savedRemainingSeconds = nil
-        case .resetCycle:
-            currentBlockIndex = 0
-            savedRemainingSeconds = nil
-        case .resetCurrent:
-            savedRemainingSeconds = nil
-        case .resume:
-            break
+        } else {
+            let recovery: InterruptRecovery
+            if previousMode == .resting || interruptedBlock?.type == .rest {
+                recovery = preset.restInterruptRecovery
+            } else {
+                recovery = preset.workInterruptRecovery
+            }
+            
+            switch recovery {
+            case .advanceNext:
+                let nextIndex = currentBlockIndex + 1
+                if nextIndex >= preset.blocks.count {
+                    incrementCompletedCycles()
+                    currentBlockIndex = 0
+                } else {
+                    currentBlockIndex = nextIndex
+                }
+                savedRemainingSeconds = nil
+            case .resetCycle:
+                currentBlockIndex = 0
+                savedRemainingSeconds = nil
+            case .resetCurrent:
+                savedRemainingSeconds = nil
+            case .resume:
+                break
+            }
         }
         
         resetToCurrentBlock()
@@ -520,9 +533,13 @@ public final class TimerEngine: ObservableObject {
                 if let alertDate = alertTriggeredDate, now.timeIntervalSince(alertDate) >= 180 {
                     alertTriggeredDate = nil
                     AlertManager.shared.closePanel()
-                    // 仅当用户离开电脑（键鼠空闲 >= 60秒）时转入待机，并精准回溯结账时间至归零点；若正在电脑前打字赶工则不强行打断
+                    // 若用户离开电脑（键鼠空闲 >= 60秒）时转入待机，并精准回溯结账时间至归零点
                     if idleSecondsProvider() >= 60 {
                         enterStandby(reason: .idle, at: alertDate)
+                        return
+                    } else {
+                        // 若用户仍活跃在电脑前赶工，自动顺延 5 分钟工作倒计时，绝不僵死在 0 秒停滞
+                        snooze(minutes: activeBlock.snoozeMinutes, rewindingTo: currentBlockIndex, actionType: .workCompleted)
                         return
                     }
                 }

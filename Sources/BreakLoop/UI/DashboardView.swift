@@ -92,39 +92,55 @@ public struct DashboardView: View {
     // MARK: - 顶部工具栏（方案直接切换 + 待机出口）
     private var topBar: some View {
         HStack {
-            Menu {
-                ForEach(presetStore.presets) { preset in
-                    Button(action: {
-                        presetStore.activePresetId = preset.id
-                        engine.preset = preset
-                    }) {
-                        HStack {
-                            Text("\(preset.name) (\(preset.blocks.count)步)")
-                            if engine.preset.id == preset.id {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                }
-            } label: {
+            if engine.mode != .standby {
                 HStack(spacing: 5) {
-                    Image(systemName: "square.stack.3d.down.right.fill")
-                        .font(.caption)
-                        .foregroundColor(.accentColor)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.secondary)
                     Text(engine.preset.name)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.primary)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 9))
-                        .foregroundColor(.secondary)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(Color(NSColor.controlBackgroundColor))
                 .clipShape(Capsule())
+                .help("当前方案正在运行中，无法更改方案；如需更换请先点击右上角「进入待机」")
+            } else {
+                Menu {
+                    ForEach(presetStore.presets) { preset in
+                        Button(action: {
+                            presetStore.activePresetId = preset.id
+                            engine.preset = preset
+                        }) {
+                            HStack {
+                                Text("\(preset.name) (\(preset.blocks.count)步)")
+                                if engine.preset.id == preset.id {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "square.stack.3d.down.right.fill")
+                            .font(.caption)
+                            .foregroundColor(.accentColor)
+                        Text(engine.preset.name)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.primary)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .clipShape(Capsule())
+                }
+                .menuStyle(.borderlessButton)
+                .help("点击直接切换预设方案")
             }
-            .menuStyle(.borderlessButton)
-            .help("点击直接切换预设方案")
             
             Spacer()
             
@@ -214,43 +230,26 @@ public struct DashboardView: View {
         HStack(spacing: 12) {
             Group {
                 switch engine.mode {
-                case .working:
-                    Button(action: { engine.advanceToNextBlock() }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "cup.and.saucer.fill")
-                            Text("进入休息")
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .bold))
-                        }
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 155, height: 42)
-                        .background(Color.green)
-                        .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .help("完成本步专注，推进到下一步：休息")
-                    
-                case .resting:
+                case .working, .resting:
                     let isNextWork = (engine.nextBlock?.type ?? .work) == .work
-                    let nextTitle = isNextWork ? "开始专注" : (engine.nextBlock?.name.isEmpty == false ? "进入\(engine.nextBlock!.name)" : "推进至下一步")
-                    let nextIcon = isNextWork ? "laptopcomputer" : "cup.and.saucer.fill"
                     let nextColor: Color = isNextWork ? .blue : .green
+                    let nextBlockName = engine.nextBlock?.name ?? (isNextWork ? "专注" : "休息")
                     Button(action: { engine.advanceToNextBlock() }) {
                         HStack(spacing: 6) {
-                            Image(systemName: nextIcon)
-                            Text(nextTitle)
+                            Image(systemName: "forward.end.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text("推进至下一步")
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 11, weight: .bold))
                         }
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.white)
-                        .frame(width: 155, height: 42)
+                        .frame(width: 160, height: 42)
                         .background(nextColor)
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
-                    .help(isNextWork ? "完成本次休息，推进到下一步：专注" : "推进到下一个休息步骤")
+                    .help("推进至计划中的下一步：\(nextBlockName)")
                     
                 case .standby:
                     let isNextWork = (engine.currentBlock?.type ?? .work) == .work
@@ -308,6 +307,7 @@ public struct DashboardView: View {
     // MARK: - 底部指标
     private func summaryPill(title: String, value: String, icon: String, color: Color) -> some View {
         HStack(spacing: 10) {
+            Spacer()
             Image(systemName: icon)
                 .font(.system(size: 14))
                 .foregroundColor(color)

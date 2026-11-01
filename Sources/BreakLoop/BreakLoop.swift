@@ -38,7 +38,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                         actionType: event.actionType
                     )
                 },
-                onDismiss: {}
+                onDismiss: { [weak self] in
+                    guard let self = self else { return }
+                    // 若用户直接关闭弹窗（未点击延时与主行动），兜底平滑推进至下一步，绝不挂在 0 秒停滞
+                    if !event.autoAdvanced {
+                        self.engine.advanceToNextBlock()
+                    }
+                }
             )
         }
         
@@ -52,6 +58,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             case .toggleStartWorkOrNext:
                 if self.engine.mode == .resting {
                     self.engine.startNextWorkCycle()
+                } else if self.engine.mode == .working {
+                    self.engine.advanceToNextBlock()
                 } else if self.engine.mode == .standby {
                     self.engine.startWork()
                 }
@@ -150,6 +158,9 @@ struct MenuBarLabelView: View {
     }
     
     private var menuBarIcon: String {
+        if engine.isPaused {
+            return "pause.circle.fill"   // 临时暂停：显式暂停标识
+        }
         switch engine.mode {
         case .working:
             return "record.circle"       // 专注中：聚焦环

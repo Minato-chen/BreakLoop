@@ -33,16 +33,11 @@ public struct MenuBarContent: View {
             
             Divider()
             
-            // 2. 核心快捷动作（规范文本，杜绝“去工作 (工作)”同义重复）
+            // 2. 核心快捷动作（统一按计划流转，杜绝重复）
             switch engine.mode {
-            case .working:
+            case .working, .resting:
                 Button(action: { engine.advanceToNextBlock() }) {
-                    Label(actionButtonTitle, systemImage: "cup.and.saucer.fill")
-                }
-                
-            case .resting:
-                Button(action: { engine.advanceToNextBlock() }) {
-                    Label(actionButtonTitle, systemImage: "laptopcomputer")
+                    Label("推进至下一步", systemImage: "forward.end.fill")
                 }
                 
             case .standby:
@@ -57,10 +52,6 @@ public struct MenuBarContent: View {
                     Label(engine.isPaused ? "继续计时" : "临时暂停", systemImage: engine.isPaused ? "play.fill" : "pause.fill")
                 }
                 
-                Button(action: { engine.advanceToNextBlock() }) {
-                    Label("跳过本步", systemImage: "forward.fill")
-                }
-                
                 Button(action: { engine.enterStandby(reason: .manual) }) {
                     Label("进入待机", systemImage: "moon.fill")
                 }
@@ -68,8 +59,8 @@ public struct MenuBarContent: View {
             
             Divider()
             
-            // 3. 方案切换
-            Menu("方案: \(engine.preset.name)") {
+            // 3. 方案切换（运行中锁定，待机时可自由切换）
+            Menu("方案: \(engine.preset.name)\(engine.mode != .standby ? " (运行中)" : "")") {
                 ForEach(presetStore.presets) { p in
                     Button(action: {
                         presetStore.activePresetId = p.id
@@ -84,6 +75,7 @@ public struct MenuBarContent: View {
                     }
                 }
             }
+            .disabled(engine.mode != .standby)
             
             // 4. 静音模式勾选（macOS 原生菜单勾选标记）
             Toggle("静音模式", isOn: $soundManager.isMuted)
@@ -105,11 +97,8 @@ public struct MenuBarContent: View {
     
     private var actionButtonTitle: String {
         switch engine.mode {
-        case .working:
-            return "进入休息"
-        case .resting:
-            let isNextWork = (engine.nextBlock?.type ?? .work) == .work
-            return isNextWork ? "开始专注" : "推进至下一步"
+        case .working, .resting:
+            return "推进至下一步"
         case .standby:
             let isNextWork = (engine.currentBlock?.type ?? .work) == .work
             return isNextWork ? "开始专注" : "开始休息"
@@ -132,7 +121,8 @@ public struct MenuBarContent: View {
                 return "[\(step)/\(total)] \(blockName) · 已休 \(mins)m"
             }
         case .standby:
-            return "待机中 · 下一步: [1/\(total)] \(engine.preset.blocks.first?.name ?? "")"
+            let nextBlock = engine.currentBlock ?? engine.preset.blocks.first
+            return "待机中 · 下一步: [\(step)/\(total)] \(nextBlock?.name ?? "")"
         }
     }
 }
