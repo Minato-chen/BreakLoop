@@ -24,33 +24,6 @@ public struct PipelineFlowCanvasView: View {
             // 顶部方案标题栏
             headerSection
             
-            // 进行中的方案配置锁定提示横幅
-            if isPresetRunning {
-                HStack(spacing: 8) {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.orange)
-                    Text("当前方案正在运行中（步骤 \(engine.currentBlockIndex + 1)/\(preset.blocks.count)），配置已锁定。如需更改，请先让方案进入待机。")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Button("进入待机") {
-                        engine.enterStandby(reason: .manual)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.mini)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(Color.orange.opacity(0.08))
-                .overlay(
-                    Rectangle()
-                        .fill(Color.orange.opacity(0.18))
-                        .frame(height: 1),
-                    alignment: .bottom
-                )
-            }
-            
             Divider()
             
             // 流程图卡片序列与回路
@@ -121,8 +94,8 @@ public struct PipelineFlowCanvasView: View {
     private var headerSection: some View {
         HStack(spacing: 12) {
             HStack(spacing: 6) {
-                Image(systemName: isPresetRunning ? "lock.square.stack.fill" : "square.stack.3d.down.right.fill")
-                    .foregroundColor(isPresetRunning ? .orange : .accentColor)
+                Image(systemName: "square.stack.3d.down.right.fill")
+                    .foregroundColor(.accentColor)
                 TextField("方案名称", text: $preset.name)
                     .font(.system(size: 15, weight: .bold))
                     .textFieldStyle(.plain)
@@ -138,6 +111,14 @@ public struct PipelineFlowCanvasView: View {
             
             if isPresetRunning {
                 HStack(spacing: 8) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 10))
+                        Text("运行中无法更改")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.secondary)
+                    
                     Text("运行中 [\(engine.currentBlockIndex + 1)/\(preset.blocks.count)]")
                         .font(.caption)
                         .fontWeight(.semibold)
