@@ -90,14 +90,6 @@ public final class AlertManager {
         // 仅关闭前一个弹窗（若有），绝不停止刚刚触发播放的提示音
         closePanel()
         
-        let screenRect = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 800, height: 600)
-        let width: CGFloat = 360
-        let height: CGFloat = 160
-        let x = screenRect.midX - (width / 2)
-        let y = screenRect.maxY - height - 80 // 居中靠上
-        
-        let panel = AlertPanel(contentRect: NSRect(x: x, y: y, width: width, height: height))
-        
         let alertView = AlertView(
             event: event,
             onPrimaryAction: onPrimaryAction,
@@ -106,6 +98,16 @@ public final class AlertManager {
         )
         
         let hostingView = NSHostingView(rootView: alertView)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 380, height: 120)
+        let fittingSize = hostingView.fittingSize
+        let width: CGFloat = 380
+        let targetHeight = max(130, ceil(fittingSize.height))
+        
+        let screenRect = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 800, height: 600)
+        let x = screenRect.midX - (width / 2)
+        let y = screenRect.maxY - targetHeight - 80 // 居中靠上
+        
+        let panel = AlertPanel(contentRect: NSRect(x: x, y: y, width: width, height: targetHeight))
         panel.contentView = hostingView
         
         alertWindowController = NSWindowController(window: panel)
@@ -115,7 +117,7 @@ public final class AlertManager {
 
 import SwiftUI
 
-/// 原生精致磨砂毛玻璃风格的提醒浮窗视图
+/// 原生精致磨砂毛玻璃风格的提醒浮窗视图（自适应高度，长文案自动折行无截断）
 public struct AlertView: View {
     let event: AlertTriggerEvent
     let onPrimaryAction: () -> Void
@@ -124,24 +126,24 @@ public struct AlertView: View {
     
     public var body: some View {
         VStack(spacing: 16) {
-            HStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 14) {
                 Image(systemName: event.actionType == .workCompleted ? "cup.and.saucer.fill" : "laptopcomputer")
-                    .font(.system(size: 26, weight: .semibold))
+                    .font(.system(size: 28, weight: .semibold))
                     .foregroundColor(event.actionType == .workCompleted ? .green : .blue)
+                    .frame(width: 32, height: 32)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(event.title)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    Text(event.message)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
+                // 咖啡/电脑图标旁边直接展示文案（自定义文案优先，默认文案兜底；支持多行自动折行）
+                Text(event.title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary.opacity(0.7))
-                        .font(.title3)
+                        .foregroundColor(.secondary.opacity(0.6))
+                        .font(.system(size: 16))
                 }
                 .buttonStyle(.plain)
             }
@@ -163,6 +165,7 @@ public struct AlertView: View {
             }
         }
         .padding(18)
+        .frame(width: 380)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(

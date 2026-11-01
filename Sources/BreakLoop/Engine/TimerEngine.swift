@@ -596,28 +596,27 @@ public final class TimerEngine: ObservableObject {
     
     private func triggerAlert(for block: FlowBlock, actionType: AlertTriggerEvent.ActionType) {
         let cycleNumber = completedCycles + 1
-        let title = (actionType == .workCompleted) ? "该喝杯咖啡，休息一下了" : "休息结束，精力满满"
-        var msg = block.message
+        var msg = block.message.trimmingCharacters(in: .whitespacesAndNewlines)
         
         if actionType == .workCompleted {
             for rule in preset.rotation {
                 if rule.everyNthCycle > 0 && cycleNumber % rule.everyNthCycle == 0 {
-                    msg = rule.message
+                    msg = rule.message.trimmingCharacters(in: .whitespacesAndNewlines)
                     break
                 }
             }
             if msg.isEmpty {
-                msg = SoundManager.shared.defaultRestMessage.isEmpty ? "离开工位，走动喝水" : SoundManager.shared.defaultRestMessage
+                msg = "该喝杯咖啡，休息一下了"
             }
         } else {
             if msg.isEmpty {
-                msg = SoundManager.shared.defaultWorkMessage.isEmpty ? "准备开启新一轮专注" : SoundManager.shared.defaultWorkMessage
+                msg = SoundManager.shared.defaultRestMessage.isEmpty ? "准备开启新一轮专注" : SoundManager.shared.defaultRestMessage
             }
         }
         
         let event = AlertTriggerEvent(
             actionType: actionType,
-            title: title,
+            title: msg,
             message: msg,
             style: preset.alertStyle,
             soundName: block.soundName,
