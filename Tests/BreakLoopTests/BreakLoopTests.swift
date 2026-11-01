@@ -437,6 +437,22 @@ final class BreakLoopTests: XCTestCase {
         let newRestBlock = FlowBlock.makeCountdownRest()
         XCTAssertEqual(newRestBlock.message, soundManager.defaultRestMessage)
         XCTAssertEqual(newRestBlock.soundName, soundManager.defaultRestSound)
+        
+        // 验证全局静音开关与试听强制发声
+        soundManager.isMuted = true
+        XCTAssertTrue(soundManager.isMuted)
+        soundManager.play(soundName: "Glass")
+        XCTAssertFalse(soundManager.isPlaying, "全局静音开启时常规播放应被拦截")
+        
+        // 恢复正常
+        soundManager.isMuted = false
+        XCTAssertFalse(soundManager.isMuted)
+        
+        // 验证提醒形式改名正名
+        XCTAssertEqual(AlertStyle.none.displayName, "不提醒（完全静默）")
+        XCTAssertEqual(AlertStyle.both.displayName, "弹窗与声音")
+        XCTAssertEqual(AlertStyle.sound.displayName, "仅声音")
+        XCTAssertEqual(AlertStyle.popup.displayName, "仅弹窗")
     }
     
     // MARK: - 测试 12: 暂停与继续计时控制

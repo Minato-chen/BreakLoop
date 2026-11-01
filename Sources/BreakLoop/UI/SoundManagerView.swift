@@ -85,27 +85,40 @@ public struct SoundManagerView: View {
                 .font(.system(size: 14, weight: .bold))
                 .foregroundColor(.primary)
             
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("到点提醒形式")
-                        .font(.system(size: 13, weight: .medium))
-                    Text("控制工休切换时的交互行为（支持弹窗与声音、仅声音、仅弹窗或完全静音）")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("到点提醒形式")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("控制工休切换时的交互行为（支持弹窗与声音、仅声音、仅弹窗或完全静默）")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Picker("", selection: $engine.preset.alertStyle) {
+                        ForEach(AlertStyle.allCases, id: \.self) { style in
+                            Text(style.displayName).tag(style)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 155)
+                    .onChange(of: engine.preset.alertStyle) { _ in
+                        PresetStore.shared.activePreset = engine.preset
+                    }
                 }
                 
-                Spacer()
-                
-                Picker("", selection: $engine.preset.alertStyle) {
-                    Text("弹窗与声音").tag(AlertStyle.both)
-                    Text("仅声音").tag(AlertStyle.sound)
-                    Text("仅弹窗").tag(AlertStyle.popup)
-                    Text("静音").tag(AlertStyle.none)
-                }
-                .pickerStyle(.menu)
-                .frame(width: 140)
-                .onChange(of: engine.preset.alertStyle) { _ in
-                    PresetStore.shared.activePreset = engine.preset
+                if soundManager.isMuted {
+                    HStack(spacing: 5) {
+                        Image(systemName: "speaker.slash.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                        Text("当前处于全局静音模式（扬声器已关闭，弹窗保持原规则）")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                    }
+                    .padding(.top, 4)
                 }
             }
             .padding(14)

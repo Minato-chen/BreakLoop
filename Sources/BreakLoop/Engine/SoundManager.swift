@@ -59,8 +59,13 @@ public final class SoundManager: ObservableObject {
     private let defaultRepeatCountKey = "BreakLoop.SoundManager.RepeatCount"
     private let maxDurationKey = "BreakLoop.SoundManager.MaxDuration"
     private let volumeKey = "BreakLoop.SoundManager.Volume"
+    private let isMutedKey = "BreakLoop.SoundManager.IsMuted"
     
     @Published public private(set) var customSounds: [CustomSound] = []
+    
+    @Published public var isMuted: Bool {
+        didSet { UserDefaults.standard.set(isMuted, forKey: isMutedKey) }
+    }
     
     @Published public var defaultWorkSound: String {
         didSet { UserDefaults.standard.set(defaultWorkSound, forKey: defaultWorkSoundKey) }
@@ -120,6 +125,8 @@ public final class SoundManager: ObservableObject {
         
         let savedVolume = defaults.float(forKey: volumeKey)
         self.volume = savedVolume > 0 ? savedVolume : 0.85
+        
+        self.isMuted = defaults.bool(forKey: isMutedKey)
         
         loadCustomSounds()
     }
@@ -220,11 +227,16 @@ public final class SoundManager: ObservableObject {
     ///   - soundName: 提示音名称（系统内置名或自定义音频名称）
     ///   - repeatCount: 重复次数（默认为全局 defaultRepeatCount，即 3 次）
     ///   - maxDuration: 最长持续时间（默认 12 秒，末尾 2 秒平滑渐弱）
+    ///   - forceIgnoreMute: 是否强制忽略全局静音（仅试听场景为 true）
     public func play(
         soundName: String,
         repeatCount: Int? = nil,
-        maxDuration: TimeInterval? = nil
+        maxDuration: TimeInterval? = nil,
+        forceIgnoreMute: Bool = false
     ) {
+        if isMuted && !forceIgnoreMute {
+            return
+        }
         stop()
         
         let repeats = repeatCount ?? defaultRepeatCount
@@ -262,9 +274,9 @@ public final class SoundManager: ObservableObject {
         }
     }
     
-    /// 试听单次或全套
+    /// 试听单次或全套（试听强制发声，不受全局静音模式影响）
     public func preview(soundName: String, repeats: Int = 1) {
-        play(soundName: soundName, repeatCount: repeats, maxDuration: 6.0)
+        play(soundName: soundName, repeatCount: repeats, maxDuration: 6.0, forceIgnoreMute: true)
     }
     
     /// 阶段递增轻报时：按指定次数轻响提醒（例如 20分钟响2下、30分钟响3下），纯声音不弹窗，计时不暂停

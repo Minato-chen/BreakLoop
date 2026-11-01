@@ -28,10 +28,19 @@ public enum BlockTimingMode: String, Codable, CaseIterable {
 
 /// 提醒方式
 public enum AlertStyle: String, Codable, CaseIterable {
-    case popup   // 仅浮窗
+    case both    // 弹窗与声音
     case sound   // 仅声音
-    case both    // 浮窗与声音
-    case none    // 无提示（静音）
+    case popup   // 仅弹窗
+    case none    // 不提醒（完全静默）
+    
+    public var displayName: String {
+        switch self {
+        case .both: return "弹窗与声音"
+        case .sound: return "仅声音"
+        case .popup: return "仅弹窗"
+        case .none: return "不提醒（完全静默）"
+        }
+    }
 }
 
 /// 打断恢复策略（支持针对专注与休息自定义不同恢复行为）

@@ -4,6 +4,7 @@ import SwiftUI
 public struct DashboardView: View {
     @ObservedObject var engine: TimerEngine
     @ObservedObject var presetStore = PresetStore.shared
+    @ObservedObject var soundManager = SoundManager.shared
     
     public init(engine: TimerEngine) {
         self.engine = engine
@@ -127,20 +128,40 @@ public struct DashboardView: View {
             
             Spacer()
             
-            if engine.mode != .standby {
-                Button(action: { engine.enterStandby(reason: .manual) }) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "moon.fill")
-                        Text("进入待机")
-                    }
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .clipShape(Capsule())
+            HStack(spacing: 8) {
+                // 极简圆钮静音开关 (方案 1)
+                Button(action: {
+                    soundManager.isMuted.toggle()
+                }) {
+                    Image(systemName: soundManager.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(soundManager.isMuted ? .red : .secondary)
+                        .frame(width: 28, height: 28)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(soundManager.isMuted ? Color.red.opacity(0.3) : Color.primary.opacity(0.06), lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
+                .help(soundManager.isMuted ? "已开启全局静音（点击恢复声音）" : "声音正常（点击开启全局静音）")
+                
+                if engine.mode != .standby {
+                    Button(action: { engine.enterStandby(reason: .manual) }) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "moon.fill")
+                            Text("进入待机")
+                        }
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
     }

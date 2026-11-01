@@ -4,6 +4,7 @@ import SwiftUI
 public struct MenuBarContent: View {
     @ObservedObject var engine: TimerEngine
     @ObservedObject var presetStore = PresetStore.shared
+    @ObservedObject var soundManager = SoundManager.shared
     
     var onOpenDashboard: () -> Void
     var onQuit: () -> Void
@@ -84,7 +85,11 @@ public struct MenuBarContent: View {
                 }
             }
             
-            // 4. 打开主面板
+            // 4. 静音模式勾选（macOS 原生菜单勾选标记）
+            Toggle("静音模式", isOn: $soundManager.isMuted)
+                .keyboardShortcut("m")
+            
+            // 5. 打开主面板
             Button("打开仪表台") {
                 onOpenDashboard()
             }
