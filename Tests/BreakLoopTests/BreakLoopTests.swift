@@ -933,4 +933,72 @@ final class BreakLoopTests: XCTestCase {
         engine.tick()
         XCTAssertEqual(engine.menuBarText, "> 1m")
     }
+    
+    // MARK: - 测试 23: 专注后接自由休息（正计时）在延后 5 分钟期间的模式与索引强一致锁定
+    func testSnoozeWithStopwatchRestLockstep() {
+        let preset = Preset(
+            name: "SnoozeStopwatchLockstepTest",
+            blocks: [
+                FlowBlock.makeWork(name: "专注", minutes: 1),
+                FlowBlock.makeStopwatchRest(name: "休息(自由)", targetSeconds: 30)
+            ]
+        )
+        var alertCount = 0
+        var lastAlert: AlertTriggerEvent?
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        engine.onAlertTriggered = { event in
+            alertCount += 1
+            lastAlert = event
+        }
+        
+        // 1. 启动专注并走完 1 分钟
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        
+        simulatedDate.addTimeInterval(60)
+        engine.tick()
+        XCTAssertEqual(alertCount, 1)
+        guard let alert = lastAlert else { return XCTFail() }
+        
+        // 2. 模拟 BreakLoop.swift 中点击「稍后 5 分钟」
+        engine.snooze(
+            minutes: alert.snoozeMinutes,
+            rewindingTo: alert.blockIndex,
+            actionType: alert.actionType
+        )
+        
+        // 验证：必须精准锁定在第 0 步专注块（绝不能错位到第 1 步休息块）
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        XCTAssertEqual(engine.currentBlock?.type, .work)
+        XCTAssertEqual(engine.currentSeconds, 5 * 60)
+        
+        // 3. 走过 2 分钟加时（处于专注倒计时中）
+        simulatedDate.addTimeInterval(2 * 60)
+        engine.tick()
+        // 倒计时剩余 3 分钟 (180 秒)，绝不能变成正计时的 2 分钟
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        XCTAssertEqual(engine.currentSeconds, 3 * 60)
+        
+        // 4. 走完剩余 3 分钟加时（总共 5 分钟到期）
+        simulatedDate.addTimeInterval(3 * 60)
+        engine.tick()
+        
+        // 验证：5 分钟到期后必须触发第 2 次提醒！
+        XCTAssertEqual(alertCount, 2)
+        XCTAssertEqual(lastAlert?.actionType, .workCompleted)
+        
+        // 验证：自动推进至第 1 步自由休息，模式切换为休息态
+        XCTAssertEqual(engine.mode, .resting)
+        XCTAssertEqual(engine.currentBlockIndex, 1)
+        XCTAssertEqual(engine.currentBlock?.type, .rest)
+        XCTAssertEqual(engine.currentSeconds, 0)
+    }
 }

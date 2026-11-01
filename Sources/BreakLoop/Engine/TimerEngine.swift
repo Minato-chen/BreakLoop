@@ -374,17 +374,22 @@ public final class TimerEngine: ObservableObject {
         advanceToNextBlock()
     }
     
-    public func snooze(minutes: Int = 5, rewindingTo blockIndex: Int? = nil) {
-        if let idx = blockIndex, idx >= 0 && idx < preset.blocks.count {
-            currentBlockIndex = idx
+    public func snooze(
+        minutes: Int = 5,
+        rewindingTo blockIndex: Int? = nil,
+        actionType: AlertTriggerEvent.ActionType = .workCompleted
+    ) {
+        let targetIdx = blockIndex ?? currentBlockIndex
+        if targetIdx >= 0 && targetIdx < preset.blocks.count {
+            currentBlockIndex = targetIdx
         }
         let now = nowProvider()
-        // 若此前处于工作态且未结算（如未开启自动推进模式），先保存前一段专注会话
-        if mode == .working, sessionStartDate != nil {
+        // 若此前处于活动计时态且未结算，先保存前一段会话
+        if sessionStartDate != nil {
             closeCurrentSession(endedAt: now, reason: .completed)
         }
         sessionStartDate = now
-        mode = .working
+        mode = (actionType == .workCompleted) ? .working : .resting
         targetSeconds = minutes * 60
         currentSeconds = targetSeconds
         targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
@@ -476,17 +481,32 @@ public final class TimerEngine: ObservableObject {
             sessionStore.updateHeartbeatTimestamp(at: now)
         }
         
-        switch block.type {
-        case .work:
+        // 模式与模块强一致守卫（防止状态撕裂导致工作态误入休息正计时）
+        if mode == .working && block.type != .work {
+            if let workIdx = preset.blocks.firstIndex(where: { $0.type == .work }) {
+                currentBlockIndex = workIdx
+            }
+        } else if mode == .resting && block.type != .rest {
+            if let restIdx = preset.blocks.firstIndex(where: { $0.type == .rest }) {
+                currentBlockIndex = restIdx
+            }
+        }
+        guard let activeBlock = currentBlock else { return }
+        
+        switch mode {
+        case .standby:
+            return
+            
+        case .working:
             guard let targetEnd = targetEndDate else { return }
             let remaining = targetEnd.timeIntervalSince(now)
             if remaining <= 0 {
                 currentSeconds = 0
                 if !hasTriggeredCompletionAlert {
                     hasTriggeredCompletionAlert = true
-                    triggerAlert(for: block, actionType: .workCompleted)
+                    triggerAlert(for: activeBlock, actionType: .workCompleted)
                     alertTriggeredDate = now
-                    if block.autoAdvance {
+                    if activeBlock.autoAdvance {
                         advanceToNextBlock()
                         return
                     }
@@ -506,17 +526,17 @@ public final class TimerEngine: ObservableObject {
                 currentSeconds = max(0, Int(ceil(remaining)))
             }
             
-        case .rest:
-            if block.timingMode == .countdown {
+        case .resting:
+            if activeBlock.timingMode == .countdown {
                 guard let targetEnd = targetEndDate else { return }
                 let remaining = targetEnd.timeIntervalSince(now)
                 if remaining <= 0 {
                     currentSeconds = 0
                     if !hasTriggeredCompletionAlert {
                         hasTriggeredCompletionAlert = true
-                        triggerAlert(for: block, actionType: .restCompleted)
+                        triggerAlert(for: activeBlock, actionType: .restCompleted)
                         alertTriggeredDate = now
-                        if block.autoAdvance {
+                        if activeBlock.autoAdvance {
                             advanceToNextBlock()
                             return
                         }
@@ -545,21 +565,21 @@ public final class TimerEngine: ObservableObject {
                 let elapsedMinutes = Int(elapsed) / 60
                 
                 // 阶段递增轻报时：纯声音、绝不弹窗、计时不暂停
-                if block.enableIncrementalChimes {
-                    if elapsedMinutes >= block.chimeStartMinutes && elapsedMinutes <= block.chimeEndMinutes {
-                        if elapsedMinutes != lastChimedMinute && (elapsedMinutes == block.chimeStartMinutes || elapsedMinutes % 10 == 0) {
+                if activeBlock.enableIncrementalChimes {
+                    if elapsedMinutes >= activeBlock.chimeStartMinutes && elapsedMinutes <= activeBlock.chimeEndMinutes {
+                        if elapsedMinutes != lastChimedMinute && (elapsedMinutes == activeBlock.chimeStartMinutes || elapsedMinutes % 10 == 0) {
                             lastChimedMinute = elapsedMinutes
                             let chimes = max(1, elapsedMinutes / 10)
-                            SoundManager.shared.playChimes(soundName: block.soundName, count: chimes)
+                            SoundManager.shared.playChimes(soundName: activeBlock.soundName, count: chimes)
                         }
                     }
                     
                     // 到达截止阈值 (chimeEndMinutes)
-                    if elapsedMinutes >= block.chimeEndMinutes {
+                    if elapsedMinutes >= activeBlock.chimeEndMinutes {
                         if !hasTriggeredCutoffAlert {
                             hasTriggeredCutoffAlert = true
-                            if block.chimeCutoffAction == .alertAndStandby {
-                                triggerAlert(for: block, actionType: .restCompleted)
+                            if activeBlock.chimeCutoffAction == .alertAndStandby {
+                                triggerAlert(for: activeBlock, actionType: .restCompleted)
                                 alertTriggeredDate = now
                             }
                         }

@@ -32,7 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     }
                 },
                 onSnooze: { [weak self] in
-                    self?.engine.snooze(minutes: event.snoozeMinutes, rewindingTo: event.autoAdvanced ? event.blockIndex : nil)
+                    self?.engine.snooze(
+                        minutes: event.snoozeMinutes,
+                        rewindingTo: event.blockIndex,
+                        actionType: event.actionType
+                    )
                 },
                 onDismiss: {}
             )
