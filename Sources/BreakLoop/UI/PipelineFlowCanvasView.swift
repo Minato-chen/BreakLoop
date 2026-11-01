@@ -341,24 +341,25 @@ public struct PipelineFlowCanvasView: View {
                     Button(action: { duplicateBlock(at: index) }) {
                         Label("复制模块", systemImage: "doc.on.doc")
                     }
-                    if index > 0 {
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                preset.blocks.swapAt(index, index - 1)
-                            }
-                        }) {
-                            Label("上移", systemImage: "arrow.up")
+                    Button(action: {
+                        guard index > 0 else { return }
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            preset.blocks.swapAt(index, index - 1)
                         }
+                    }) {
+                        Label("上移", systemImage: "arrow.up")
                     }
-                    if index < preset.blocks.count - 1 {
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                preset.blocks.swapAt(index, index + 1)
-                            }
-                        }) {
-                            Label("下移", systemImage: "arrow.down")
+                    .disabled(index == 0)
+                    
+                    Button(action: {
+                        guard index < preset.blocks.count - 1 else { return }
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            preset.blocks.swapAt(index, index + 1)
                         }
+                    }) {
+                        Label("下移", systemImage: "arrow.down")
                     }
+                    .disabled(index >= preset.blocks.count - 1)
                     
                     Divider()
                     
@@ -712,17 +713,24 @@ public struct PipelineFlowCanvasView: View {
         )
     }
     
-    // MARK: - 居中连线与纯粹插入（仅有工作模块与休息模块两种）
+    // MARK: - 居中连线与侧偏插入（主轴贯穿无遮挡，向右微偏悬停显现）
     private func connectorView(id: String, tooltip: String, insertAction: @escaping (FlowBlock) -> Void) -> some View {
         let isHovered = (hoveredConnectorId == id)
         
         return ZStack {
-            // 纯粹干净的垂直连接线（无重叠多余箭头）
+            // 纯粹干净的垂直连接线（保持笔直贯穿，无重叠阻断）
             Rectangle()
-                .fill(isHovered ? Color.accentColor.opacity(0.35) : Color.primary.opacity(0.12))
-                .frame(width: 1.5, height: 24)
+                .fill(isHovered ? Color.accentColor.opacity(0.4) : Color.primary.opacity(0.12))
+                .frame(width: 1.5, height: 26)
             
-            // 纯粹精致的圆形插入菜单（限定为圆形尺寸，杜绝原生菜单矩形框残留）
+            // 悬停时显现的右侧微型分支引导线
+            Rectangle()
+                .fill(Color.accentColor.opacity(0.35))
+                .frame(width: 12, height: 1.2)
+                .offset(x: 6)
+                .opacity(isHovered ? 1.0 : 0.0)
+            
+            // 方案 1：向右偏离中心线的侧挂式插入按钮（限定圆形，悬停才高亮显现）
             Menu {
                 Button(action: {
                     insertAction(FlowBlock.makeWork())
@@ -740,21 +748,29 @@ public struct PipelineFlowCanvasView: View {
                     Circle()
                         .fill(Color(NSColor.controlBackgroundColor))
                         .frame(width: 20, height: 20)
-                        .shadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 1)
+                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
                     Image(systemName: "plus")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(isHovered ? .accentColor : .secondary)
+                        .foregroundColor(.accentColor)
                 }
                 .overlay(
-                    Circle().stroke(isHovered ? Color.accentColor : Color.primary.opacity(0.18), lineWidth: 1.2)
+                    Circle().stroke(Color.accentColor.opacity(0.6), lineWidth: 1.2)
                 )
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .frame(width: 20, height: 20)
             .contentShape(Circle())
+            .offset(x: 22)
+            .opacity(isHovered ? 1.0 : 0.0)
             .help(tooltip)
-            .onHover { h in hoveredConnectorId = h ? id : nil }
+        }
+        .frame(width: 80, height: 26)
+        .contentShape(Rectangle())
+        .onHover { h in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                hoveredConnectorId = h ? id : nil
+            }
         }
         .padding(.vertical, 2)
     }
