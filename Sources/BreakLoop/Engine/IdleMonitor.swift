@@ -135,6 +135,13 @@ public final class IdleMonitor {
             // 盒盖时长远超休息阈值（如睡了几小时或已离开），以休息上限封顶结束并进入待机
             let cappedEndDate = sleepStart.addingTimeInterval(maxRestSeconds)
             engine.enterStandby(reason: .restTimeout, at: cappedEndDate)
+        } else if let block = engine.currentBlock, block.timingMode == .countdown {
+            // 倒计时短休：如果在盒盖离开期间倒计时已经走完，唤醒时直接静默切入待机（免去开盖弹窗打扰），就绪下一步专注
+            let remaining = engine.currentSeconds
+            if sleepDuration >= Double(remaining) {
+                let actualEnd = sleepStart.addingTimeInterval(Double(remaining))
+                engine.enterStandby(reason: .completed, at: actualEnd)
+            }
         }
     }
     

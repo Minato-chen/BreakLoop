@@ -324,7 +324,18 @@ public struct DashboardView: View {
                 return "+\(max(1, engine.currentSeconds / 60))m"
             }
         case .standby:
-            return "\(engine.currentBlock?.durationMinutes ?? 20)m"
+            if let block = engine.currentBlock {
+                if block.timingMode == .stopwatch {
+                    return "0m"
+                } else if let secs = block.countdownSeconds, secs < 60 {
+                    return "\(secs)s"
+                } else {
+                    let mins = max(1, block.durationMinutes)
+                    return "\(mins)m"
+                }
+            } else {
+                return "20m"
+            }
         }
     }
     

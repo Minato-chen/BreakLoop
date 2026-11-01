@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import CoreGraphics
 
 /// 计时器运行状态（严格极简三态）
 public enum TimerMode: String, Codable, Equatable {
@@ -103,6 +104,9 @@ public final class TimerEngine: ObservableObject {
     
     public let sessionStore: SessionStore
     public var nowProvider: () -> Date
+    public var idleSecondsProvider: () -> Double = {
+        CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0)!)
+    }
     public var onAlertTriggered: ((AlertTriggerEvent) -> Void)?
     
     private var tickTimer: Timer?
@@ -113,13 +117,17 @@ public final class TimerEngine: ObservableObject {
         preset: Preset? = nil,
         sessionStore: SessionStore = SessionStore(),
         userDefaults: UserDefaults = .standard,
-        nowProvider: @escaping () -> Date = { Date() }
+        nowProvider: @escaping () -> Date = { Date() },
+        idleSecondsProvider: (() -> Double)? = nil
     ) {
         let initialPreset = preset ?? Preset.defaultPresets[0]
         self.preset = initialPreset
         self.sessionStore = sessionStore
         self.userDefaults = userDefaults
         self.nowProvider = nowProvider
+        if let isp = idleSecondsProvider {
+            self.idleSecondsProvider = isp
+        }
         
         let initialBlock = initialPreset.blocks.first
         let initialDuration = (initialBlock?.durationMinutes ?? 20) * 60
@@ -373,9 +381,14 @@ public final class TimerEngine: ObservableObject {
     
     private func resetToCurrentBlock() {
         if let block = currentBlock {
-            let dur = (block.timingMode == .countdown) ? block.totalCountdownSeconds : (block.durationMinutes > 0 ? block.durationMinutes * 60 : 20 * 60)
-            targetSeconds = dur
-            currentSeconds = dur
+            if block.timingMode == .stopwatch {
+                targetSeconds = 0
+                currentSeconds = 0
+            } else {
+                let dur = block.totalCountdownSeconds
+                targetSeconds = dur
+                currentSeconds = dur
+            }
         } else {
             targetSeconds = 20 * 60
             currentSeconds = targetSeconds
@@ -462,12 +475,15 @@ public final class TimerEngine: ObservableObject {
                     }
                 }
                 
-                // 未开启自动推进时：若弹窗弹出超过 3 分钟未操作且空闲，安全转入待机
+                // 未开启自动推进时：若弹窗弹出超过 3 分钟未操作
                 if let alertDate = alertTriggeredDate, now.timeIntervalSince(alertDate) >= 180 {
                     alertTriggeredDate = nil
                     AlertManager.shared.closePanel()
-                    enterStandby(reason: .idle, at: now)
-                    return
+                    // 仅当用户离开电脑（键鼠空闲 >= 60秒）时转入待机，并精准回溯结账时间至归零点；若正在电脑前打字赶工则不强行打断
+                    if idleSecondsProvider() >= 60 {
+                        enterStandby(reason: .idle, at: alertDate)
+                        return
+                    }
                 }
             } else {
                 currentSeconds = max(0, Int(ceil(remaining)))
@@ -489,11 +505,11 @@ public final class TimerEngine: ObservableObject {
                         }
                     }
                     
-                    // 倒计时休息结束：若弹窗弹出超过 3 分钟无人点击，绝不对空房假装专注，自动转入待机
+                    // 倒计时休息结束：若弹窗弹出超过 3 分钟无人点击，自动转入待机，时间精准回溯至归零点
                     if let alertDate = alertTriggeredDate, now.timeIntervalSince(alertDate) >= 180 {
                         alertTriggeredDate = nil
                         AlertManager.shared.closePanel()
-                        enterStandby(reason: .restTimeout, at: now)
+                        enterStandby(reason: .restTimeout, at: alertDate)
                         return
                     }
                     
@@ -533,11 +549,11 @@ public final class TimerEngine: ObservableObject {
                     }
                 }
                 
-                // 自由休息截止弹窗超时未操作（3 分钟无响应） -> 自动进入待机
+                // 自由休息截止弹窗超时未操作（3 分钟无响应） -> 自动进入待机，时间精准回溯至截止点
                 if let alertDate = alertTriggeredDate, now.timeIntervalSince(alertDate) >= 180 {
                     alertTriggeredDate = nil
                     AlertManager.shared.closePanel()
-                    enterStandby(reason: .restTimeout, at: now)
+                    enterStandby(reason: .restTimeout, at: alertDate)
                     return
                 }
                 

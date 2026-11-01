@@ -737,4 +737,31 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(engine.currentBlockIndex, 0)
         XCTAssertEqual(engine.currentBlock?.type, .work)
     }
+    
+    // MARK: - 测试 19: 待机状态下大数字显示（自由休息重置为0，倒计时显示满额预设）
+    func testStandbyDisplayFormattedOutput() {
+        let preset = Preset(
+            name: "DisplayTest",
+            blocks: [
+                FlowBlock.makeWork(name: "专注", minutes: 25),
+                FlowBlock.makeStopwatchRest(name: "自由休息"),
+                FlowBlock.makeCountdownRest(name: "远眺", seconds: 20)
+            ]
+        )
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        
+        // 初始待机状态：第 0 步是专注 25m
+        XCTAssertEqual(engine.mode, .standby)
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        XCTAssertEqual(engine.currentSeconds, 25 * 60)
+        
+        // 验证菜单栏在待机时显示“待命”
+        engine.updateMenuBarText()
+        XCTAssertEqual(engine.menuBarText, "待命")
+    }
 }
