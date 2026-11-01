@@ -351,7 +351,15 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(TimeFormatter.formatMinutesOnly(seconds: 60), "1m")
         XCTAssertEqual(TimeFormatter.formatMinutesOnly(seconds: 90), "2m")
         
-        // 2. 引擎菜单栏文本：符号与步数定制验证
+        // 2. 完整精确时间 formatExact（无符号倒计时，+ 号正计时，小时动态预留）
+        XCTAssertEqual(TimeFormatter.formatExact(seconds: 1200, isCountup: false), "20:00")
+        XCTAssertEqual(TimeFormatter.formatExact(seconds: 5, isCountup: false), "00:05")
+        XCTAssertEqual(TimeFormatter.formatExact(seconds: 3665, isCountup: false), "1:01:05")
+        XCTAssertEqual(TimeFormatter.formatExact(seconds: 0, isCountup: true), "+00:00")
+        XCTAssertEqual(TimeFormatter.formatExact(seconds: 135, isCountup: true), "+02:15")
+        XCTAssertEqual(TimeFormatter.formatExact(seconds: 3920, isCountup: true), "+1:05:20")
+        
+        // 3. 引擎菜单栏文本：符号与步数定制验证（符号与数字之间无空格）
         let preset = Preset(
             name: "格式测试",
             blocks: [
@@ -369,20 +377,20 @@ final class BreakLoopTests: XCTestCase {
         // 待机状态默认：待命 (隐藏步数)
         XCTAssertEqual(engine.menuBarText, "待命")
         
-        // 工作状态默认：< 25m (隐藏步数，倒计时带 <)
+        // 工作状态默认：<25m (隐藏步数，倒计时带 <)
         engine.startCurrentBlock()
-        XCTAssertEqual(engine.menuBarText, "< 25m")
+        XCTAssertEqual(engine.menuBarText, "<25m")
         
         // 推进到自由正计时休息
         engine.advanceToNextBlock()
         simulatedDate.addTimeInterval(65)
         engine.tick()
-        XCTAssertEqual(engine.menuBarText, "> 1m")
+        XCTAssertEqual(engine.menuBarText, ">1m")
         
         // 开启显示步数
         mockUserDefaults.set(true, forKey: "BreakLoop.MenuBarShowStep")
         engine.updateMenuBarText()
-        XCTAssertEqual(engine.menuBarText, "2/2 > 1m")
+        XCTAssertEqual(engine.menuBarText, "2/2 >1m")
         
         // 关闭显示符号
         mockUserDefaults.set(false, forKey: "BreakLoop.MenuBarShowSymbol")
@@ -614,7 +622,7 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(engine.mode, .resting)
         XCTAssertEqual(engine.currentBlock?.name, "看远方")
         XCTAssertEqual(engine.currentSeconds, 20)
-        XCTAssertEqual(engine.menuBarText, "< 20s")
+        XCTAssertEqual(engine.menuBarText, "<20s")
         
         // 走过 10 秒
         simulatedDate.addTimeInterval(10)
@@ -919,19 +927,19 @@ final class BreakLoopTests: XCTestCase {
         engine.startCurrentBlock()
         XCTAssertEqual(engine.mode, .resting)
         
-        // 刚刚开始走时 0 秒 -> > 0m
+        // 刚刚开始走时 0 秒 -> >0m
         engine.tick()
-        XCTAssertEqual(engine.menuBarText, "> 0m")
+        XCTAssertEqual(engine.menuBarText, ">0m")
         
-        // 走过 50 秒（截图中的真实场景）-> 依然是 > 0m（向下取整，绝不误显为 > 1m）
+        // 走过 50 秒（截图中的真实场景）-> 依然是 >0m（向下取整，绝不误显为 >1m）
         simulatedDate.addTimeInterval(50)
         engine.tick()
-        XCTAssertEqual(engine.menuBarText, "> 0m")
+        XCTAssertEqual(engine.menuBarText, ">0m")
         
-        // 走过满 60 秒 -> > 1m
+        // 走过满 60 秒 -> >1m
         simulatedDate.addTimeInterval(10)
         engine.tick()
-        XCTAssertEqual(engine.menuBarText, "> 1m")
+        XCTAssertEqual(engine.menuBarText, ">1m")
     }
     
     // MARK: - 测试 23: 专注后接自由休息（正计时）在延后 5 分钟期间的模式与索引强一致锁定

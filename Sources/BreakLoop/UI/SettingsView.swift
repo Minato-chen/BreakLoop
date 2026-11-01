@@ -15,26 +15,16 @@ public struct PresetManagerView: View {
         HStack(spacing: 0) {
             // 左侧：预设方案选择列表（固定宽度，彻底避免 HSplitView 拖拉抖动）
             VStack(spacing: 0) {
-                // 顶部：方案计数与新增
+                // 顶部：方案列表标题（固定高度 46，与右侧标题栏基线完全对齐）
                 HStack {
                     Text("方案列表 (\(presetStore.presets.count))")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
                     Spacer()
-                    Button(action: createNewPreset) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.accentColor)
-                            Text("新增")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
-                    }
-                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+                .frame(height: 46)
                 .background(Color(NSColor.controlBackgroundColor))
                 
                 Divider()
@@ -86,12 +76,33 @@ public struct PresetManagerView: View {
                 
                 Divider()
                 
-                // 底部操作栏（删除 + 上下移动，运行中或默认方案保护不可删除）
+                // 底部操作栏（+、上移、下移、删除，运行中或默认方案保护不可删除）
                 let isSelectedRunning = (engine.mode != .standby && engine.preset.id == selectedPresetId)
                 let isSelectedActiveDefault = (presetStore.activePresetId == selectedPresetId)
                 let canDelete = presetStore.presets.count > 1 && !isSelectedRunning && !isSelectedActiveDefault
                 
                 HStack(spacing: 6) {
+                    Button(action: createNewPreset) {
+                        Image(systemName: "plus")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("新增预设方案")
+                    
+                    Button(action: { presetStore.moveUp(id: selectedPresetId) }) {
+                        Image(systemName: "arrow.up")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("上移选中方案")
+                    
+                    Button(action: { presetStore.moveDown(id: selectedPresetId) }) {
+                        Image(systemName: "arrow.down")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("下移选中方案")
+                    
                     Button(action: deleteSelectedPreset) {
                         Image(systemName: "trash")
                             .foregroundColor(canDelete ? .red.opacity(0.8) : .secondary.opacity(0.35))
@@ -101,21 +112,10 @@ public struct PresetManagerView: View {
                     .disabled(!canDelete)
                     .help(isSelectedRunning ? "当前方案正在运行中，不可删除" : (isSelectedActiveDefault ? "当前方案已设为默认方案，不可删除" : "删除选中的方案"))
                     
-                    Button(action: { presetStore.moveUp(id: selectedPresetId) }) {
-                        Image(systemName: "arrow.up")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    
-                    Button(action: { presetStore.moveDown(id: selectedPresetId) }) {
-                        Image(systemName: "arrow.down")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    
                     Spacer()
                 }
-                .padding(8)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
                 .background(Color(NSColor.controlBackgroundColor))
             }
             .frame(width: 190)
@@ -297,8 +297,8 @@ public struct GeneralPreferencesView: View {
     
     private var menuBarPreviewPill: some View {
         let stepText = menuBarShowStep ? "1/2 " : ""
-        let symCountdown = menuBarShowSymbol ? "< " : ""
-        let symCountup = menuBarShowSymbol ? (menuBarSymbolStyle == "plus" ? "+ " : "> ") : ""
+        let symCountdown = menuBarShowSymbol ? "<" : ""
+        let symCountup = menuBarShowSymbol ? (menuBarSymbolStyle == "plus" ? "+" : ">") : ""
         
         return HStack(spacing: 10) {
             HStack(spacing: 4) {

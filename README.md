@@ -84,8 +84,8 @@
 ### 方式一：直接下载预编译版本（推荐）
 
 1. 访问 GitHub Releases 页面下载最新版本：  
-   👉 **[GitHub Releases - BreakLoop v1.0.0](https://github.com/Minato-chen/BreakLoop/releases/latest)**
-2. 下载 `BreakLoop-1.0.0.dmg` 或 `BreakLoop-1.0.0.zip`。
+   👉 **[GitHub Releases - BreakLoop 最新发布](https://github.com/Minato-chen/BreakLoop/releases/latest)**
+2. 下载 `BreakLoop-2.0.0.dmg` 或 `BreakLoop-2.0.0.zip`。
 3. 双击解压并拖拽 `BreakLoop.app` 到 **访达 -> 应用程序 (Applications)** 目录即可。
 
 > **提示（首次打开 macOS 提示未签名或无法验证开发者）**：  

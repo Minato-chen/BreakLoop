@@ -21,6 +21,21 @@ public enum TimeFormatter {
         return String(format: "%02d:%02d", m, s)
     }
     
+    /// 完整精确时间展示（支持小时级自适应：小于1小时为 MM:SS，达到或超过1小时自动为 H:MM:SS；倒计时无符号，正计时带 + 号）
+    public static func formatExact(seconds: Int, isCountup: Bool = false) -> String {
+        let total = max(0, seconds)
+        let prefix = isCountup ? "+" : ""
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        let s = total % 60
+        
+        if h > 0 {
+            return String(format: "%@%d:%02d:%02d", prefix, h, m, s)
+        } else {
+            return String(format: "%@%02d:%02d", prefix, m, s)
+        }
+    }
+    
     /// 简短自然描述（如 45 分钟、1 小时 20 分）
     public static func formatNatural(seconds: Int) -> String {
         let m = seconds / 60

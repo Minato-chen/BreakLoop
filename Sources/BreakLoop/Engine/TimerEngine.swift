@@ -444,8 +444,8 @@ public final class TimerEngine: ObservableObject {
         let showSymbol = userDefaults.object(forKey: "BreakLoop.MenuBarShowSymbol") as? Bool ?? true
         let symbolStyle = userDefaults.string(forKey: "BreakLoop.MenuBarSymbolStyle") ?? "chevron"
         
-        let countdownSym = showSymbol ? "< " : ""
-        let countupSym = showSymbol ? (symbolStyle == "plus" ? "+ " : "> ") : ""
+        let countdownSym = showSymbol ? "<" : ""
+        let countupSym = showSymbol ? (symbolStyle == "plus" ? "+" : ">") : ""
         let stepPrefix = showStep ? "\(step)/\(total) " : ""
         
         if isPaused {

@@ -40,10 +40,12 @@ public struct DashboardView: View {
                         }
                     }
                     
-                    // 分钟倒计时与当前阶段简标
+                    // 精确时间倒计时与当前阶段简标
                     VStack(spacing: 4) {
-                        Text(displayMinutes)
-                            .font(.system(size: 60, weight: .bold, design: .rounded))
+                        Text(displayTime)
+                            .font(.system(size: 56, weight: .bold, design: .rounded).monospacedDigit())
+                            .minimumScaleFactor(0.8)
+                            .lineLimit(1)
                             .foregroundColor(.primary)
                         
                         Text(stateTitle)
@@ -236,11 +238,9 @@ public struct DashboardView: View {
                     let nextBlockName = engine.nextBlock?.name ?? (isNextWork ? "专注" : "休息")
                     Button(action: { engine.advanceToNextBlock() }) {
                         HStack(spacing: 6) {
+                            Text("推进至下一步")
                             Image(systemName: "forward.end.fill")
                                 .font(.system(size: 12, weight: .semibold))
-                            Text("推进至下一步")
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .bold))
                         }
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.white)
@@ -338,28 +338,28 @@ public struct DashboardView: View {
     }
     
     // MARK: - 动态计算属性
-    private var displayMinutes: String {
+    private var displayTime: String {
         switch engine.mode {
         case .working:
-            return TimeFormatter.formatMinutesOnly(seconds: engine.currentSeconds)
+            return TimeFormatter.formatExact(seconds: engine.currentSeconds, isCountup: false)
         case .resting:
             if let block = engine.currentBlock, block.timingMode == .countdown {
-                return TimeFormatter.formatMinutesOnly(seconds: engine.currentSeconds)
+                return TimeFormatter.formatExact(seconds: engine.currentSeconds, isCountup: false)
             } else {
-                return "+\(max(0, engine.currentSeconds / 60))m"
+                return TimeFormatter.formatExact(seconds: engine.currentSeconds, isCountup: true)
             }
         case .standby:
             if let block = engine.currentBlock {
                 if block.timingMode == .stopwatch {
-                    return "0m"
-                } else if let secs = block.countdownSeconds, secs < 60 {
-                    return "\(secs)s"
+                    return "+00:00"
+                } else if let secs = block.countdownSeconds {
+                    return TimeFormatter.formatExact(seconds: secs, isCountup: false)
                 } else {
                     let mins = max(1, block.durationMinutes)
-                    return "\(mins)m"
+                    return TimeFormatter.formatExact(seconds: mins * 60, isCountup: false)
                 }
             } else {
-                return "20m"
+                return "20:00"
             }
         }
     }

@@ -7,6 +7,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     
     private var mainWindow: NSWindow?
     
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // 单实例自检互斥保护：杜绝多进程后台并存与提示音错乱
+        enforceSingleInstance()
+    }
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 标准 App 策略：有 Dock 图标，支持主窗口
         NSApp.setActivationPolicy(.regular)
@@ -116,6 +121,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         sender.orderOut(nil)
         return false
+    }
+    
+    // MARK: - 单实例互斥与退出生命周期管理
+    private func enforceSingleInstance() {
+        let currentPid = ProcessInfo.processInfo.processIdentifier
+        let bundleId = Bundle.main.bundleIdentifier ?? "com.breakloop.BreakLoop"
+        
+        let allApps = NSWorkspace.shared.runningApplications
+        let otherInstances = allApps.filter { app in
+            guard app.processIdentifier != currentPid else { return false }
+            return app.bundleIdentifier == bundleId || app.localizedName == "BreakLoop"
+        }
+        
+        guard !otherInstances.isEmpty else { return }
+        
+        let currentIsProduction = Bundle.main.bundlePath.hasPrefix("/Applications")
+        for oldApp in otherInstances {
+            let oldPath = oldApp.bundleURL?.path ?? ""
+            // 若历史残留实例来自非 /Applications 目录（例如 Xcode 临时调试进程），直接清理终止
+            if currentIsProduction && !oldPath.hasPrefix("/Applications") {
+                oldApp.terminate()
+            } else {
+                // 若已有正常实例正在运行，唤起其主窗口，当前多余进程即刻退出，杜绝重复并发
+                oldApp.activate(options: [.activateIgnoringOtherApps])
+                exit(0)
+            }
+        }
+    }
+    
+    func applicationWillTerminate(_ notification: Notification) {
+        // 彻底退出清理：停止一切计时器、空闲监听、全局热键与声音，确保不留僵死后台
+        idleMonitor.stop()
+        HotKeyManager.shared.unregisterAll()
+        SoundManager.shared.stop()
+        AlertManager.shared.closePanel()
+        engine.enterStandby(reason: .manual)
     }
 }
 

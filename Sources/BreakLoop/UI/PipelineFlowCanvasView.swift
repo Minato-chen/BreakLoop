@@ -29,9 +29,14 @@ public struct PipelineFlowCanvasView: View {
             // 流程图卡片序列与回路
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(spacing: 0) {
+                    if isPresetRunning {
+                        lockBanner
+                            .padding(.top, 14)
+                    }
+                    
                     // 起点微标
                     startBadge
-                        .padding(.top, 18)
+                        .padding(.top, isPresetRunning ? 10 : 18)
                         .padding(.bottom, 6)
                     
                     // 居中垂直流程序列（宽度自适应，内边距充足，杜绝侧边栏截断）
@@ -93,32 +98,20 @@ public struct PipelineFlowCanvasView: View {
     // MARK: - 顶部标题区
     private var headerSection: some View {
         HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: isPresetRunning ? 3 : 0) {
-                HStack(spacing: 8) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "square.stack.3d.down.right.fill")
-                            .foregroundColor(.accentColor)
-                        TextField("方案名称", text: $preset.name)
-                            .font(.system(size: 15, weight: .bold))
-                            .textFieldStyle(.plain)
-                            .frame(maxWidth: 180)
-                            .disabled(isPresetRunning)
-                    }
-                    
-                    Text("(\(preset.blocks.count) 步循环)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+            HStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.stack.3d.down.right.fill")
+                        .foregroundColor(.accentColor)
+                    TextField("方案名称", text: $preset.name)
+                        .font(.system(size: 15, weight: .bold))
+                        .textFieldStyle(.plain)
+                        .frame(maxWidth: 180)
+                        .disabled(isPresetRunning)
                 }
                 
-                if isPresetRunning {
-                    HStack(spacing: 4) {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 10))
-                        Text("运行中无法更改")
-                            .font(.system(size: 11))
-                    }
+                Text("(\(preset.blocks.count) 步循环)")
+                    .font(.caption)
                     .foregroundColor(.secondary)
-                }
             }
             
             Spacer()
@@ -179,8 +172,23 @@ public struct PipelineFlowCanvasView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .frame(height: 46)
         .background(Color(NSColor.controlBackgroundColor))
+    }
+    
+    // MARK: - 运行中锁定提示胶囊（置于循环起点上方）
+    private var lockBanner: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 11))
+            Text("当前方案正在运行中，模块卡片已锁定")
+                .font(.system(size: 12, weight: .medium))
+        }
+        .foregroundColor(.secondary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
+        .background(Color.primary.opacity(0.06))
+        .clipShape(Capsule())
     }
     
     // MARK: - 方案专属打断恢复策略配置
