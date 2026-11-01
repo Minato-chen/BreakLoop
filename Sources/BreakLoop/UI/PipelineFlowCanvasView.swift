@@ -270,13 +270,25 @@ public struct PipelineFlowCanvasView: View {
                 
                 // 极简时长/模式徽章
                 if isStopwatch {
-                    Text("正计时 (\(targetText(for: block)))")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.purple)
+                    if block.enableIncrementalChimes {
+                        Text("正计时 (\(block.chimeStartMinutes)~\(block.chimeEndMinutes)m报时)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.purple)
+                    } else {
+                        Text("自由正计时 (纯净)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.purple)
+                    }
                 } else {
-                    Text("\(block.durationMinutes) 分钟")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
+                    if let sec = block.countdownSeconds, sec > 0 {
+                        Text("\(sec) 秒")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("\(block.durationMinutes) 分钟")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 // 运行态指示
@@ -512,43 +524,107 @@ public struct PipelineFlowCanvasView: View {
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                     
-                                    TextField("", value: binding(for: index).durationMinutes, formatter: Self.intFormatter)
+                                    if block.countdownSeconds != nil {
+                                        TextField("", value: Binding(
+                                            get: { preset.blocks[index].countdownSeconds ?? 20 },
+                                            set: { preset.blocks[index].countdownSeconds = max(1, $0) }
+                                        ), formatter: Self.intFormatter)
                                         .textFieldStyle(.roundedBorder)
                                         .multilineTextAlignment(.trailing)
-                                        .frame(width: 48)
-                                    
-                                    Stepper("", value: binding(for: index).durationMinutes, in: 1...60)
+                                        .frame(width: 44)
+                                        
+                                        Stepper("", value: Binding(
+                                            get: { preset.blocks[index].countdownSeconds ?? 20 },
+                                            set: { preset.blocks[index].countdownSeconds = max(5, $0) }
+                                        ), in: 5...300)
                                         .labelsHidden()
+                                    } else {
+                                        TextField("", value: binding(for: index).durationMinutes, formatter: Self.intFormatter)
+                                            .textFieldStyle(.roundedBorder)
+                                            .multilineTextAlignment(.trailing)
+                                            .frame(width: 44)
+                                        
+                                        Stepper("", value: binding(for: index).durationMinutes, in: 1...60)
+                                            .labelsHidden()
+                                    }
                                     
-                                    Text("分钟")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            } else {
-                                HStack(spacing: 6) {
-                                    Text("达标提醒:")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
                                     Picker("", selection: Binding(
-                                        get: { preset.blocks[index].targetSeconds ?? 20 },
-                                        set: { preset.blocks[index].targetSeconds = $0 }
+                                        get: { block.countdownSeconds != nil },
+                                        set: { isSec in
+                                            if isSec {
+                                                preset.blocks[index].countdownSeconds = 20
+                                            } else {
+                                                preset.blocks[index].countdownSeconds = nil
+                                            }
+                                        }
                                     )) {
-                                        Text("20 秒 (护眼推荐)").tag(20)
-                                        Text("30 秒").tag(30)
-                                        Text("1 分钟").tag(60)
-                                        Text("2 分钟").tag(120)
-                                        Text("5 分钟").tag(300)
+                                        Text("分钟").tag(false)
+                                        Text("秒").tag(true)
                                     }
                                     .pickerStyle(.menu)
-                                    .frame(width: 125)
+                                    .frame(width: 65)
                                 }
                             }
                         }
                         
-                        // (2) 提示音与稍后提醒延时
+                        // (2) 正计时阶段递增报时配置（自由休息专属）
+                        if block.timingMode == .stopwatch {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Toggle("开启阶段递增轻报时（纯声音不弹窗，计时不暂停）", isOn: binding(for: index).enableIncrementalChimes)
+                                    .font(.caption)
+                                
+                                if block.enableIncrementalChimes {
+                                    HStack(spacing: 14) {
+                                        HStack(spacing: 6) {
+                                            Text("起始阈值:")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            TextField("", value: binding(for: index).chimeStartMinutes, formatter: Self.intFormatter)
+                                                .textFieldStyle(.roundedBorder)
+                                                .multilineTextAlignment(.trailing)
+                                                .frame(width: 40)
+                                            Stepper("", value: binding(for: index).chimeStartMinutes, in: 1...120)
+                                                .labelsHidden()
+                                            Text("分钟")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        
+                                        HStack(spacing: 6) {
+                                            Text("截止阈值:")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            TextField("", value: binding(for: index).chimeEndMinutes, formatter: Self.intFormatter)
+                                                .textFieldStyle(.roundedBorder)
+                                                .multilineTextAlignment(.trailing)
+                                                .frame(width: 40)
+                                            Stepper("", value: binding(for: index).chimeEndMinutes, in: 1...240)
+                                                .labelsHidden()
+                                            Text("分钟")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        
+                                        Spacer()
+                                    }
+                                    
+                                    Text("💡 在 \(block.chimeStartMinutes)m ~ \(block.chimeEndMinutes)m 区间内，到达起始分钟及后续每 10 分钟按时段轻响对应次数（如 20分响2下、30分响3下）；到达截止阈值后彻底静默。")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                } else {
+                                    Text("当前为纯净自由休息模式，休息期间零弹窗零打扰，离开屏幕安心放松。")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        
+                        // (3) 提示音与稍后提醒延时
                         HStack(spacing: 12) {
                             HStack(spacing: 6) {
-                                Text("提示音:")
+                                Text(block.timingMode == .countdown ? "提示音:" : "报时声音:")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 Picker("", selection: binding(for: index).soundName) {

@@ -267,6 +267,12 @@ public final class SoundManager: ObservableObject {
         play(soundName: soundName, repeatCount: repeats, maxDuration: 6.0)
     }
     
+    /// 阶段递增轻报时：按指定次数轻响提醒（例如 20分钟响2下、30分钟响3下），纯声音不弹窗，计时不暂停
+    public func playChimes(soundName: String, count: Int) {
+        guard count > 0 else { return }
+        play(soundName: soundName, repeatCount: count, maxDuration: Double(count) * 2.5 + 3.0)
+    }
+    
     /// 立即停止一切播放并清理定时器
     public func stop() {
         fadeTimer?.invalidate()

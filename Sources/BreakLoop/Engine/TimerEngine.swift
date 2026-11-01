@@ -10,11 +10,39 @@ public enum TimerMode: String, Codable, Equatable {
 
 /// 提醒触发事件
 public struct AlertTriggerEvent: Equatable {
+    public enum ActionType: String, Codable, Equatable {
+        case workCompleted   // 专注结束，提示去休息
+        case restCompleted   // 倒计时休息结束，提示准备专注
+    }
+    
+    public let actionType: ActionType
+    public let title: String
     public let message: String
     public let style: AlertStyle
     public let soundName: String
     public let cycleCount: Int
     public let isLongRest: Bool
+    public let snoozeMinutes: Int
+    
+    public init(
+        actionType: ActionType = .workCompleted,
+        title: String = "该喝杯咖啡，休息一下了",
+        message: String,
+        style: AlertStyle = .both,
+        soundName: String = "Glass",
+        cycleCount: Int = 1,
+        isLongRest: Bool = false,
+        snoozeMinutes: Int = 5
+    ) {
+        self.actionType = actionType
+        self.title = title
+        self.message = message
+        self.style = style
+        self.soundName = soundName
+        self.cycleCount = cycleCount
+        self.isLongRest = isLongRest
+        self.snoozeMinutes = snoozeMinutes
+    }
 }
 
 /// 计时器引擎（低功耗、低内存、极简模块流水线）
@@ -68,6 +96,7 @@ public final class TimerEngine: ObservableObject {
     private var targetEndDate: Date?
     private var hasTriggeredSoftTarget: Bool = false
     private var lastRecordedMinute: Int = -1
+    private var lastChimedMinute: Int = -1
     
     public let sessionStore: SessionStore
     public var nowProvider: () -> Date
@@ -180,6 +209,7 @@ public final class TimerEngine: ObservableObject {
         sessionStartDate = now
         hasTriggeredSoftTarget = false
         lastRecordedMinute = -1
+        lastChimedMinute = -1
         isPaused = false
         pauseStartTime = nil
         remainingSecondsOnPause = nil
@@ -201,7 +231,7 @@ public final class TimerEngine: ObservableObject {
             mode = .resting
             isLongRest = (block.durationMinutes >= 15)
             if block.timingMode == .countdown {
-                targetSeconds = max(1, block.durationMinutes) * 60
+                targetSeconds = block.totalCountdownSeconds
                 if shouldResumeSavedSeconds, let saved = savedRemainingSeconds {
                     currentSeconds = saved
                     targetEndDate = now.addingTimeInterval(TimeInterval(saved))
@@ -210,7 +240,7 @@ public final class TimerEngine: ObservableObject {
                     targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
                 }
             } else {
-                targetSeconds = block.targetSeconds ?? (block.durationMinutes * 60)
+                targetSeconds = 0
                 currentSeconds = shouldResumeSavedSeconds ? (savedRemainingSeconds ?? 0) : 0
                 targetEndDate = nil
             }
@@ -312,7 +342,7 @@ public final class TimerEngine: ObservableObject {
     
     private func resetToCurrentBlock() {
         if let block = currentBlock {
-            let dur = (block.durationMinutes > 0 ? block.durationMinutes : 20) * 60
+            let dur = (block.timingMode == .countdown) ? block.totalCountdownSeconds : (block.durationMinutes > 0 ? block.durationMinutes * 60 : 20 * 60)
             targetSeconds = dur
             currentSeconds = dur
         } else {
@@ -339,8 +369,12 @@ public final class TimerEngine: ObservableObject {
             menuBarText = "\(step)/\(total) \(mins)m"
         case .resting:
             if let block = currentBlock, block.timingMode == .countdown {
-                let mins = max(1, Int(ceil(Double(max(0, currentSeconds)) / 60.0)))
-                menuBarText = "\(step)/\(total) \(mins)m"
+                if currentSeconds < 60 {
+                    menuBarText = "\(step)/\(total) \(currentSeconds)s"
+                } else {
+                    let mins = max(1, Int(ceil(Double(max(0, currentSeconds)) / 60.0)))
+                    menuBarText = "\(step)/\(total) \(mins)m"
+                }
             } else {
                 let mins = max(1, currentSeconds / 60)
                 menuBarText = "\(step)/\(total) \(mins)m"
@@ -378,7 +412,7 @@ public final class TimerEngine: ObservableObject {
             let remaining = targetEnd.timeIntervalSince(now)
             if remaining <= 0 {
                 currentSeconds = 0
-                triggerAlert(for: block)
+                triggerAlert(for: block, actionType: .workCompleted)
                 advanceToNextBlock()
             } else {
                 currentSeconds = max(0, Int(ceil(remaining)))
@@ -390,7 +424,7 @@ public final class TimerEngine: ObservableObject {
                 let remaining = targetEnd.timeIntervalSince(now)
                 if remaining <= 0 {
                     currentSeconds = 0
-                    triggerAlert(for: block)
+                    triggerAlert(for: block, actionType: .restCompleted)
                     if block.autoAdvance {
                         advanceToNextBlock()
                     } else {
@@ -406,9 +440,16 @@ public final class TimerEngine: ObservableObject {
                 guard let start = sessionStartDate else { return }
                 let elapsed = now.timeIntervalSince(start)
                 
-                if let target = block.targetSeconds, target > 0, Int(elapsed) >= target, !hasTriggeredSoftTarget {
-                    hasTriggeredSoftTarget = true
-                    triggerAlert(for: block)
+                // 阶段递增轻报时：纯声音、绝不弹窗、计时不暂停
+                if block.enableIncrementalChimes {
+                    let elapsedMinutes = Int(elapsed) / 60
+                    if elapsedMinutes >= block.chimeStartMinutes && elapsedMinutes <= block.chimeEndMinutes {
+                        if elapsedMinutes != lastChimedMinute && (elapsedMinutes == block.chimeStartMinutes || elapsedMinutes % 10 == 0) {
+                            lastChimedMinute = elapsedMinutes
+                            let chimes = max(1, elapsedMinutes / 10)
+                            SoundManager.shared.playChimes(soundName: block.soundName, count: chimes)
+                        }
+                    }
                 }
                 
                 let maxAllowedSeconds = Double(preset.restMaxMinutes * 60)
@@ -430,21 +471,36 @@ public final class TimerEngine: ObservableObject {
         }
     }
     
-    private func triggerAlert(for block: FlowBlock) {
+    private func triggerAlert(for block: FlowBlock, actionType: AlertTriggerEvent.ActionType) {
         let cycleNumber = completedCycles + 1
-        var msg = block.message.isEmpty ? (block.type == .work ? "专注时间到" : "休息时间到") : block.message
-        for rule in preset.rotation {
-            if rule.everyNthCycle > 0 && cycleNumber % rule.everyNthCycle == 0 {
-                msg = rule.message
-                break
+        let title = (actionType == .workCompleted) ? "该喝杯咖啡，休息一下了" : "休息结束，精力满满"
+        var msg = block.message
+        
+        if actionType == .workCompleted {
+            for rule in preset.rotation {
+                if rule.everyNthCycle > 0 && cycleNumber % rule.everyNthCycle == 0 {
+                    msg = rule.message
+                    break
+                }
+            }
+            if msg.isEmpty {
+                msg = SoundManager.shared.defaultRestMessage.isEmpty ? "离开工位，走动喝水" : SoundManager.shared.defaultRestMessage
+            }
+        } else {
+            if msg.isEmpty {
+                msg = SoundManager.shared.defaultWorkMessage.isEmpty ? "准备开启新一轮专注" : SoundManager.shared.defaultWorkMessage
             }
         }
+        
         let event = AlertTriggerEvent(
+            actionType: actionType,
+            title: title,
             message: msg,
             style: preset.alertStyle,
             soundName: block.soundName,
             cycleCount: cycleNumber,
-            isLongRest: isLongRest
+            isLongRest: isLongRest,
+            snoozeMinutes: block.snoozeMinutes
         )
         onAlertTriggered?(event)
     }

@@ -21,11 +21,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             guard let self = self else { return }
             AlertManager.shared.trigger(
                 event: event,
-                onStartRest: { [weak self] in
-                    self?.engine.startRest()
+                onPrimaryAction: { [weak self] in
+                    guard let self = self else { return }
+                    if event.actionType == .restCompleted {
+                        if !self.engine.preset.blocks[self.engine.currentBlockIndex].autoAdvance {
+                            self.engine.advanceToNextBlock()
+                        }
+                    }
                 },
                 onSnooze: { [weak self] in
-                    self?.engine.snooze(minutes: 5)
+                    self?.engine.snooze(minutes: event.snoozeMinutes)
                 },
                 onDismiss: {}
             )

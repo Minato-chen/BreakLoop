@@ -543,4 +543,134 @@ final class BreakLoopTests: XCTestCase {
         // 应当重新计满 20 分钟
         XCTAssertEqual(engine.currentSeconds, 20 * 60)
     }
+    
+    // MARK: - 测试 15: 精确秒级倒计时休息（如看远方 20 秒）
+    func testSecondLevelCountdownRest() {
+        let preset = Preset(
+            name: "20-20-20 Test",
+            blocks: [
+                FlowBlock.makeWork(name: "专注", minutes: 20),
+                FlowBlock.makeCountdownRest(name: "看远方", seconds: 20, message: "看远方 20 秒", sound: "Glass")
+            ]
+        )
+        var receivedAlerts: [AlertTriggerEvent] = []
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        engine.onAlertTriggered = { event in
+            receivedAlerts.append(event)
+        }
+        
+        // 1. 启动工作 20 分钟
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.mode, .working)
+        
+        // 20 分钟到期推进
+        simulatedDate.addTimeInterval(20 * 60)
+        engine.tick()
+        
+        // 应当触发 workCompleted 弹窗，并自动推进到看远方休息模块
+        XCTAssertEqual(receivedAlerts.count, 1)
+        XCTAssertEqual(receivedAlerts.first?.actionType, .workCompleted)
+        XCTAssertEqual(engine.mode, .resting)
+        XCTAssertEqual(engine.currentBlock?.name, "看远方")
+        XCTAssertEqual(engine.currentSeconds, 20)
+        XCTAssertEqual(engine.menuBarText, "2/2 20s")
+        
+        // 走过 10 秒
+        simulatedDate.addTimeInterval(10)
+        engine.tick()
+        XCTAssertEqual(engine.currentSeconds, 10)
+        
+        // 走完最后 10 秒
+        simulatedDate.addTimeInterval(10)
+        engine.tick()
+        XCTAssertEqual(engine.currentSeconds, 0)
+        XCTAssertEqual(receivedAlerts.count, 2)
+        XCTAssertEqual(receivedAlerts.last?.actionType, .restCompleted)
+    }
+    
+    // MARK: - 测试 16: 自由休息（正计时）零中途弹窗保证
+    func testFreeStopwatchRestNoAlerts() {
+        let preset = Preset(
+            name: "FreeRestTest",
+            blocks: [
+                FlowBlock.makeWork(name: "专注", minutes: 25),
+                FlowBlock.makeStopwatchRest(name: "自由休息", enableChimes: false)
+            ]
+        )
+        var receivedAlerts: [AlertTriggerEvent] = []
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        engine.onAlertTriggered = { event in
+            receivedAlerts.append(event)
+        }
+        
+        // 工作结束并进入自由休息
+        engine.startCurrentBlock()
+        simulatedDate.addTimeInterval(25 * 60)
+        engine.tick()
+        XCTAssertEqual(engine.mode, .resting)
+        XCTAssertEqual(receivedAlerts.count, 1) // 仅工作结束弹了一次
+        
+        // 在自由休息中度过 30秒、5分钟、20分钟
+        simulatedDate.addTimeInterval(30)
+        engine.tick()
+        XCTAssertEqual(receivedAlerts.count, 1, "自由休息中途绝不能弹窗打扰用户离开屏幕")
+        
+        simulatedDate.addTimeInterval(5 * 60)
+        engine.tick()
+        XCTAssertEqual(receivedAlerts.count, 1, "自由休息中途绝不能弹窗打扰用户离开屏幕")
+        
+        simulatedDate.addTimeInterval(20 * 60)
+        engine.tick()
+        XCTAssertEqual(receivedAlerts.count, 1, "自由休息全程零弹窗")
+        XCTAssertFalse(engine.isPaused, "自由休息中途报时绝不暂停计时器")
+    }
+    
+    // MARK: - 测试 17: 阶段递增轻报时（阈值 22m 开始，40m 截止静默）
+    func testIncrementalChimesThresholdAndCutoff() {
+        let block = FlowBlock.makeStopwatchRest(
+            name: "自由休息",
+            enableChimes: true,
+            chimeStart: 22,
+            chimeEnd: 40
+        )
+        XCTAssertTrue(block.enableIncrementalChimes)
+        XCTAssertEqual(block.chimeStartMinutes, 22)
+        XCTAssertEqual(block.chimeEndMinutes, 40)
+        
+        // 验证报时计算规则:
+        // 22分 -> 响 2 下 (22 / 10 = 2)
+        // 30分 -> 响 3 下 (30 / 10 = 3)
+        // 40分 -> 响 4 下 (40 / 10 = 4)
+        // 41分以上 -> 超过截止阈值静默
+        func shouldChimeAndCount(atMinute m: Int) -> Int? {
+            guard block.enableIncrementalChimes, m >= block.chimeStartMinutes, m <= block.chimeEndMinutes else {
+                return nil
+            }
+            if m == block.chimeStartMinutes || m % 10 == 0 {
+                return max(1, m / 10)
+            }
+            return nil
+        }
+        
+        XCTAssertNil(shouldChimeAndCount(atMinute: 10))
+        XCTAssertNil(shouldChimeAndCount(atMinute: 20))
+        XCTAssertNil(shouldChimeAndCount(atMinute: 21))
+        XCTAssertEqual(shouldChimeAndCount(atMinute: 22), 2)
+        XCTAssertNil(shouldChimeAndCount(atMinute: 23))
+        XCTAssertEqual(shouldChimeAndCount(atMinute: 30), 3)
+        XCTAssertNil(shouldChimeAndCount(atMinute: 35))
+        XCTAssertEqual(shouldChimeAndCount(atMinute: 40), 4)
+        XCTAssertNil(shouldChimeAndCount(atMinute: 41))
+        XCTAssertNil(shouldChimeAndCount(atMinute: 50))
+    }
 }

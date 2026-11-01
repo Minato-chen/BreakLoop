@@ -33,7 +33,7 @@ public final class AlertManager {
     /// 触发提醒
     public func trigger(
         event: AlertTriggerEvent,
-        onStartRest: @escaping () -> Void,
+        onPrimaryAction: @escaping () -> Void,
         onSnooze: @escaping () -> Void,
         onDismiss: @escaping () -> Void
     ) {
@@ -45,10 +45,10 @@ public final class AlertManager {
         // 2. 弹窗提示
         if event.style == .popup || event.style == .both {
             showPanel(
-                message: event.message,
-                onStartRest: { [weak self] in
+                event: event,
+                onPrimaryAction: { [weak self] in
                     self?.dismiss()
-                    onStartRest()
+                    onPrimaryAction()
                 },
                 onSnooze: { [weak self] in
                     self?.dismiss()
@@ -78,8 +78,8 @@ public final class AlertManager {
     }
     
     private func showPanel(
-        message: String,
-        onStartRest: @escaping () -> Void,
+        event: AlertTriggerEvent,
+        onPrimaryAction: @escaping () -> Void,
         onSnooze: @escaping () -> Void,
         onDismiss: @escaping () -> Void
     ) {
@@ -94,8 +94,8 @@ public final class AlertManager {
         let panel = AlertPanel(contentRect: NSRect(x: x, y: y, width: width, height: height))
         
         let alertView = AlertView(
-            message: message,
-            onStartRest: onStartRest,
+            event: event,
+            onPrimaryAction: onPrimaryAction,
             onSnooze: onSnooze,
             onDismiss: onDismiss
         )
@@ -112,23 +112,23 @@ import SwiftUI
 
 /// 原生精致磨砂毛玻璃风格的提醒浮窗视图
 public struct AlertView: View {
-    let message: String
-    let onStartRest: () -> Void
+    let event: AlertTriggerEvent
+    let onPrimaryAction: () -> Void
     let onSnooze: () -> Void
     let onDismiss: () -> Void
     
     public var body: some View {
         VStack(spacing: 16) {
             HStack(spacing: 12) {
-                Image(systemName: "cup.and.saucer.fill")
+                Image(systemName: event.actionType == .workCompleted ? "cup.and.saucer.fill" : "laptopcomputer")
                     .font(.system(size: 26, weight: .semibold))
-                    .foregroundColor(.green)
+                    .foregroundColor(event.actionType == .workCompleted ? .green : .blue)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("该喝杯咖啡，休息一下了")
+                    Text(event.title)
                         .font(.headline)
                         .foregroundColor(.primary)
-                    Text(message)
+                    Text(event.message)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -143,14 +143,14 @@ public struct AlertView: View {
             
             HStack(spacing: 12) {
                 Button(action: onSnooze) {
-                    Text("稍后 5 分钟")
+                    Text("稍后 \(event.snoozeMinutes) 分钟")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.regular)
                 
-                Button(action: onStartRest) {
-                    Text("开始休息")
+                Button(action: onPrimaryAction) {
+                    Text(event.actionType == .workCompleted ? "离开工位" : "开始专注")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)

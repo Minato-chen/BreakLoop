@@ -82,29 +82,48 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
     public var type: FlowBlockType
     public var name: String
     public var durationMinutes: Int        // 倒计时时长（分），或正计时的预计/参考分钟
+    public var countdownSeconds: Int? = nil // 精确倒计时秒数（若设置如20s，则以此为准）
     public var timingMode: BlockTimingMode // 倒计时 / 正计时
-    public var targetSeconds: Int? = nil         // 正计时达标轻提示秒数（例如 20s）
-    public var soundName: String = "Glass"           // 结束提示音
-    public var message: String = ""             // 提示文案，如 "看远方 20 秒", "闭目养神"
-    public var autoAdvance: Bool = true           // 结束后是否自动推进到下一块
-    public var snoozeMinutes: Int = 5          // 稍后提醒延时时长（默认 5 分钟）
+    public var targetSeconds: Int? = nil   // 兼容历史字段
+    public var soundName: String = "Glass" // 结束提示音
+    public var message: String = ""        // 提示文案，如 "看远方 20 秒", "闭目养神"
+    public var autoAdvance: Bool = true    // 结束后是否自动推进到下一块
+    public var snoozeMinutes: Int = 5      // 稍后提醒延时时长（默认 5 分钟）
+    
+    // 正计时专属：阶段递增轻报时配置（默认关闭，不暂停，零弹窗）
+    public var enableIncrementalChimes: Bool = false // 开启阶段递增报时
+    public var chimeStartMinutes: Int = 20           // 起始报时阈值（如 20 分钟，响 2 下）
+    public var chimeEndMinutes: Int = 40             // 截止报时阈值（如 40 分钟为最后一次，之后彻底静默）
+    
+    /// 获取当前模块实际的完整倒计时总秒数
+    public var totalCountdownSeconds: Int {
+        if let sec = countdownSeconds, sec > 0 {
+            return sec
+        }
+        return max(1, durationMinutes) * 60
+    }
     
     public init(
         id: UUID = UUID(),
         type: FlowBlockType,
         name: String,
         durationMinutes: Int = 20,
+        countdownSeconds: Int? = nil,
         timingMode: BlockTimingMode = .countdown,
         targetSeconds: Int? = nil,
         soundName: String = "Glass",
         message: String = "",
         autoAdvance: Bool = true,
-        snoozeMinutes: Int = 5
+        snoozeMinutes: Int = 5,
+        enableIncrementalChimes: Bool = false,
+        chimeStartMinutes: Int = 20,
+        chimeEndMinutes: Int = 40
     ) {
         self.id = id
         self.type = type
         self.name = name
         self.durationMinutes = durationMinutes
+        self.countdownSeconds = countdownSeconds
         // 工作模块始终强制为倒计时；仅休息模块可自由选择倒计时或正计时
         self.timingMode = (type == .work) ? .countdown : timingMode
         self.targetSeconds = targetSeconds
@@ -112,10 +131,15 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
         self.message = message
         self.autoAdvance = autoAdvance
         self.snoozeMinutes = snoozeMinutes
+        self.enableIncrementalChimes = enableIncrementalChimes
+        self.chimeStartMinutes = chimeStartMinutes
+        self.chimeEndMinutes = chimeEndMinutes
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, type, name, durationMinutes, timingMode, targetSeconds, soundName, message, autoAdvance, snoozeMinutes
+        case id, type, name, durationMinutes, countdownSeconds, timingMode, targetSeconds
+        case soundName, message, autoAdvance, snoozeMinutes
+        case enableIncrementalChimes, chimeStartMinutes, chimeEndMinutes
     }
     
     public init(from decoder: Decoder) throws {
@@ -124,6 +148,7 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
         self.type = try container.decode(FlowBlockType.self, forKey: .type)
         self.name = try container.decode(String.self, forKey: .name)
         self.durationMinutes = try container.decode(Int.self, forKey: .durationMinutes)
+        self.countdownSeconds = try container.decodeIfPresent(Int.self, forKey: .countdownSeconds)
         let rawTimingMode = try container.decode(BlockTimingMode.self, forKey: .timingMode)
         self.timingMode = (self.type == .work) ? .countdown : rawTimingMode
         self.targetSeconds = try container.decodeIfPresent(Int.self, forKey: .targetSeconds)
@@ -131,6 +156,9 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
         self.message = try container.decodeIfPresent(String.self, forKey: .message) ?? ""
         self.autoAdvance = try container.decodeIfPresent(Bool.self, forKey: .autoAdvance) ?? true
         self.snoozeMinutes = try container.decodeIfPresent(Int.self, forKey: .snoozeMinutes) ?? 5
+        self.enableIncrementalChimes = try container.decodeIfPresent(Bool.self, forKey: .enableIncrementalChimes) ?? false
+        self.chimeStartMinutes = try container.decodeIfPresent(Int.self, forKey: .chimeStartMinutes) ?? 20
+        self.chimeEndMinutes = try container.decodeIfPresent(Int.self, forKey: .chimeEndMinutes) ?? 40
     }
     
     /// 快捷创建专注模块
@@ -139,6 +167,7 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
             type: .work,
             name: name,
             durationMinutes: minutes,
+            countdownSeconds: nil,
             timingMode: .countdown,
             targetSeconds: nil,
             soundName: sound ?? SoundManager.shared.defaultWorkSound,
@@ -147,12 +176,19 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
         )
     }
     
-    /// 快捷创建固定倒计时休息模块
-    public static func makeCountdownRest(name: String = "休息", minutes: Int = 5, message: String? = nil, sound: String? = nil) -> FlowBlock {
+    /// 快捷创建固定倒计时休息模块（支持分钟或精确秒数）
+    public static func makeCountdownRest(
+        name: String = "休息",
+        minutes: Int = 5,
+        seconds: Int? = nil,
+        message: String? = nil,
+        sound: String? = nil
+    ) -> FlowBlock {
         FlowBlock(
             type: .rest,
             name: name,
-            durationMinutes: minutes,
+            durationMinutes: seconds != nil ? max(1, seconds! / 60) : minutes,
+            countdownSeconds: seconds,
             timingMode: .countdown,
             targetSeconds: nil,
             soundName: sound ?? SoundManager.shared.defaultRestSound,
@@ -161,17 +197,29 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
         )
     }
     
-    /// 快捷创建自由正计时休息模块（用户自己决定）
-    public static func makeStopwatchRest(name: String = "休息(自由)", targetSeconds: Int = 20, message: String? = nil, sound: String? = nil) -> FlowBlock {
+    /// 快捷创建自由正计时休息模块（纯粹自由走时，无中途弹窗）
+    public static func makeStopwatchRest(
+        name: String = "自由休息",
+        targetSeconds: Int? = nil,
+        message: String? = nil,
+        sound: String? = nil,
+        enableChimes: Bool = false,
+        chimeStart: Int = 20,
+        chimeEnd: Int = 40
+    ) -> FlowBlock {
         FlowBlock(
             type: .rest,
             name: name,
-            durationMinutes: max(1, targetSeconds / 60),
+            durationMinutes: 5,
+            countdownSeconds: nil,
             timingMode: .stopwatch,
             targetSeconds: targetSeconds,
             soundName: sound ?? SoundManager.shared.defaultRestSound,
             message: message ?? SoundManager.shared.defaultRestMessage,
-            autoAdvance: false
+            autoAdvance: false,
+            enableIncrementalChimes: enableChimes,
+            chimeStartMinutes: chimeStart,
+            chimeEndMinutes: chimeEnd
         )
     }
 }
