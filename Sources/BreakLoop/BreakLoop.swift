@@ -23,16 +23,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 event: event,
                 onPrimaryAction: { [weak self] in
                     guard let self = self else { return }
-                    if event.actionType == .restCompleted {
+                    // 核心逻辑修复：
+                    // 若当前模块未开启自动推进（此时计时器停在 00:00 等待人工确认），点击主按钮才推进到下一步；
+                    // 若已开启自动推进（工作结束时已自动切换并正在进行休息计时），点击「离开工位」仅为关闭浮窗确认已知晓，
+                    // 绝不能再次触发 advanceToNextBlock()，否则会导致刚开始的休息被瞬间跳过直接回到专注！
+                    if !event.autoAdvanced {
                         self.engine.advanceToNextBlock()
-                    } else if event.actionType == .workCompleted {
-                        if !self.engine.preset.blocks[self.engine.currentBlockIndex].autoAdvance {
-                            self.engine.advanceToNextBlock()
-                        }
                     }
                 },
                 onSnooze: { [weak self] in
-                    self?.engine.snooze(minutes: event.snoozeMinutes)
+                    self?.engine.snooze(minutes: event.snoozeMinutes, rewindingTo: event.autoAdvanced ? event.blockIndex : nil)
                 },
                 onDismiss: {}
             )

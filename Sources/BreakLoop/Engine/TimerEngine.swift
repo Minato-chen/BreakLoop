@@ -24,6 +24,8 @@ public struct AlertTriggerEvent: Equatable {
     public let cycleCount: Int
     public let isLongRest: Bool
     public let snoozeMinutes: Int
+    public let blockIndex: Int
+    public let autoAdvanced: Bool
     
     public init(
         actionType: ActionType = .workCompleted,
@@ -33,7 +35,9 @@ public struct AlertTriggerEvent: Equatable {
         soundName: String = "Glass",
         cycleCount: Int = 1,
         isLongRest: Bool = false,
-        snoozeMinutes: Int = 5
+        snoozeMinutes: Int = 5,
+        blockIndex: Int = 0,
+        autoAdvanced: Bool = false
     ) {
         self.actionType = actionType
         self.title = title
@@ -43,6 +47,8 @@ public struct AlertTriggerEvent: Equatable {
         self.cycleCount = cycleCount
         self.isLongRest = isLongRest
         self.snoozeMinutes = snoozeMinutes
+        self.blockIndex = blockIndex
+        self.autoAdvanced = autoAdvanced
     }
 }
 
@@ -368,12 +374,18 @@ public final class TimerEngine: ObservableObject {
         advanceToNextBlock()
     }
     
-    public func snooze(minutes: Int = 5) {
+    public func snooze(minutes: Int = 5, rewindingTo blockIndex: Int? = nil) {
+        if let idx = blockIndex, idx >= 0 && idx < preset.blocks.count {
+            currentBlockIndex = idx
+        }
         let now = nowProvider()
         mode = .working
         targetSeconds = minutes * 60
         currentSeconds = targetSeconds
         targetEndDate = now.addingTimeInterval(TimeInterval(targetSeconds))
+        hasTriggeredCompletionAlert = false
+        hasTriggeredCutoffAlert = false
+        alertTriggeredDate = nil
         startTimer()
         updateMenuBarText()
         syncToWidget()
@@ -606,7 +618,9 @@ public final class TimerEngine: ObservableObject {
             soundName: block.soundName,
             cycleCount: cycleNumber,
             isLongRest: isLongRest,
-            snoozeMinutes: block.snoozeMinutes
+            snoozeMinutes: block.snoozeMinutes,
+            blockIndex: currentBlockIndex,
+            autoAdvanced: block.autoAdvance
         )
         onAlertTriggered?(event)
     }

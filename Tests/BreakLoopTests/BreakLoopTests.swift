@@ -780,4 +780,60 @@ final class BreakLoopTests: XCTestCase {
         engine.updateMenuBarText()
         XCTAssertEqual(engine.menuBarText, "待命")
     }
+    
+    // MARK: - 测试 20: 工作结束提醒与「离开工位」主按钮交互防跳过机制
+    func testWorkCompletedLeaveDeskAlertActionDoesNotSkipRest() {
+        let preset = Preset(
+            name: "LeaveDeskAlertTest",
+            blocks: [
+                FlowBlock.makeWork(name: "专注", minutes: 20), // 默认 autoAdvance: true
+                FlowBlock.makeCountdownRest(name: "休息", minutes: 5) // 默认 autoAdvance: false
+            ]
+        )
+        var receivedAlert: AlertTriggerEvent?
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        engine.onAlertTriggered = { event in
+            receivedAlert = event
+        }
+        
+        // 1. 启动专注
+        engine.startCurrentBlock()
+        XCTAssertEqual(engine.mode, .working)
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        
+        // 2. 20 分钟专注时间结束
+        simulatedDate.addTimeInterval(20 * 60)
+        engine.tick()
+        
+        // 验证：触发 workCompleted 弹窗，并已正确标记 autoAdvanced = true
+        guard let alert = receivedAlert else {
+            XCTFail("应当触发提醒事件")
+            return
+        }
+        XCTAssertEqual(alert.actionType, .workCompleted)
+        XCTAssertTrue(alert.autoAdvanced)
+        XCTAssertEqual(alert.blockIndex, 0)
+        
+        // 验证：引擎当前已自动处于休息阶段
+        XCTAssertEqual(engine.mode, .resting)
+        XCTAssertEqual(engine.currentBlockIndex, 1)
+        XCTAssertEqual(engine.currentBlock?.name, "休息")
+        
+        // 3. 用户在弹窗上点击「离开工位」（触发 onPrimaryAction 回调）
+        // 模拟 BreakLoop.swift 中的回调逻辑：
+        if !alert.autoAdvanced {
+            engine.advanceToNextBlock()
+        }
+        
+        // 核心断言：点击「离开工位」后，引擎必须依然保持在休息阶段（.resting），
+        // 绝不能错误跳回专注阶段（.working）！
+        XCTAssertEqual(engine.mode, .resting)
+        XCTAssertEqual(engine.currentBlockIndex, 1)
+        XCTAssertEqual(engine.currentBlock?.name, "休息")
+    }
 }
