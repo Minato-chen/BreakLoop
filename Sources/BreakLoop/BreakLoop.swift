@@ -80,11 +80,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func showMainWindow() {
         if mainWindow == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 880, height: 560),
+                contentRect: NSRect(x: 0, y: 0, width: 880, height: 580),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
+            window.minSize = NSSize(width: 860, height: 550)
             window.title = "BreakLoop"
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden

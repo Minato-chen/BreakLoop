@@ -40,11 +40,11 @@ public struct StatsView: View {
     }
     
     public var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             // 1. 顶部专业工具栏：维度切换 + 历史日历随心选 + 快速跳转当期 + 导出
             topToolbar
                 .padding(.horizontal, 20)
-                .padding(.top, 14)
+                .padding(.top, 10)
             
             // 2. 四宫格指标卡片
             overviewCards
@@ -581,7 +581,17 @@ public struct StatsView: View {
     
     // MARK: - 3. 月视图（整月 28~31 天日历圆环，指上去查看精确数值，点击穿透至日视图）
     private var monthCalendarGridView: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let rowCount = max(1, (monthCells.count + 6) / 7)
+        let isSixRows = rowCount >= 6
+        // 自适应高度：6 行时压缩单格高度为 38pt，5 行时为 46pt，确保两者的整体网格高度完全一致（约 250pt），绝不挤压顶部 UI
+        let cellHeight: CGFloat = isSixRows ? 38 : 46
+        let ringSize: CGFloat = isSixRows ? 25 : 29
+        let ringLineWidth: CGFloat = isSixRows ? 2.6 : 3.0
+        let gridSpacing: CGFloat = isSixRows ? 4 : 6
+        let columns = Array(repeating: GridItem(.flexible(), spacing: gridSpacing), count: 7)
+        let weekdaySymbols = ["一", "二", "三", "四", "五", "六", "日"]
+        
+        return VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("月度专注日历 (对比整月每天)")
                     .font(.headline)
@@ -598,10 +608,6 @@ public struct StatsView: View {
                 }
             }
             
-            // 7 列日历网格（周一至周日）
-            let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
-            let weekdaySymbols = ["一", "二", "三", "四", "五", "六", "日"]
-            
             HStack {
                 ForEach(weekdaySymbols, id: \.self) { sym in
                     Text(sym)
@@ -613,7 +619,7 @@ public struct StatsView: View {
             }
             .padding(.bottom, 2)
             
-            LazyVGrid(columns: columns, spacing: 6) {
+            LazyVGrid(columns: columns, spacing: gridSpacing) {
                 ForEach(monthCells) { cell in
                     Button(action: {
                         if cell.isCurrentMonth {
@@ -621,35 +627,35 @@ public struct StatsView: View {
                             currentScope = .day
                         }
                     }) {
-                        VStack(spacing: 2) {
+                        VStack(spacing: isSixRows ? 0 : 2) {
                             ZStack {
                                 if cell.isCurrentMonth {
                                     DualArcRingView(
                                         workMinutes: Double(cell.workMinutes),
                                         restMinutes: Double(cell.restMinutes),
                                         maxMinutes: 480.0, // 满环 8 小时
-                                        size: 30,
-                                        lineWidth: 3.2,
+                                        size: ringSize,
+                                        lineWidth: ringLineWidth,
                                         showTrack: true
                                     )
                                 }
                                 
                                 Text("\(cell.dayNumber)")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .font(.system(size: isSixRows ? 10 : 11, weight: .bold, design: .rounded))
                                     .foregroundColor(cell.isCurrentMonth ? .primary : .secondary.opacity(0.3))
                             }
                             
                             if cell.isCurrentMonth && cell.workMinutes > 0 {
                                 Text("\(cell.workMinutes)m")
-                                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                                    .font(.system(size: isSixRows ? 8 : 9, weight: .bold, design: .rounded))
                                     .foregroundColor(Color(red: 0.05, green: 0.52, blue: 1.0))
                             } else {
                                 Text("-")
-                                    .font(.system(size: 9))
+                                    .font(.system(size: isSixRows ? 8 : 9))
                                     .foregroundColor(.clear)
                             }
                         }
-                        .frame(height: 52)
+                        .frame(height: cellHeight)
                         .frame(maxWidth: .infinity)
                         .background(
                             cell.isCurrentMonth ? Color(NSColor.controlBackgroundColor) : Color.clear
@@ -972,6 +978,15 @@ public struct StatsView: View {
             let isTod = calendar.isDate(curDate, inSameDayAs: today)
             
             cells.append(MonthCell(date: curDate, dayNumber: day, isCurrentMonth: true, isToday: isTod, workMinutes: workMins, restMinutes: restMins, sessionCount: daySessions.count))
+        }
+        
+        // 补齐末尾当周剩余天数（展示次月淡灰色数字，保持网格整齐美观）
+        let trailingOffset = (7 - (cells.count % 7)) % 7
+        if trailingOffset > 0, let lastDate = cells.last?.date {
+            for i in 1...trailingOffset {
+                let nextDate = calendar.date(byAdding: .day, value: i, to: lastDate) ?? lastDate
+                cells.append(MonthCell(date: nextDate, dayNumber: calendar.component(.day, from: nextDate), isCurrentMonth: false, isToday: false, workMinutes: 0, restMinutes: 0, sessionCount: 0))
+            }
         }
         
         return cells
