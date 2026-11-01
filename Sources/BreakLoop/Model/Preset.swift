@@ -34,16 +34,27 @@ public enum AlertStyle: String, Codable, CaseIterable {
     case none    // 无提示（静音）
 }
 
-/// 打断恢复策略（支持针对手动待机与被动待机自定义恢复行为）
+/// 打断恢复策略（支持针对专注与休息自定义不同恢复行为）
 public enum InterruptRecovery: String, Codable, CaseIterable {
-    case resetCurrent = "resetCurrent"   // 从本步满额重新开始（推荐）
+    case resetCurrent = "resetCurrent"   // 从本步满额重新开始
     case resume = "resume"               // 断点续传（继续剩余时间）
-    case resetCycle = "resetCycle"       // 重置大循环（回第 1 步）
+    case advanceNext = "advanceNext"     // 推进至下一步（开始新阶段）
+    case resetCycle = "resetCycle"       // 重置整轮（回第 1 步）
     
     public var displayName: String {
         switch self {
         case .resetCurrent: return "重置本步（重新倒数）"
         case .resume: return "断点续传（继续剩余时间）"
+        case .advanceNext: return "推进至下一步（开始新阶段）"
+        case .resetCycle: return "重置整轮（回到第1步）"
+        }
+    }
+    
+    public func displayName(for type: FlowBlockType) -> String {
+        switch self {
+        case .resetCurrent: return "重置本步（重新倒数）"
+        case .resume: return "断点续传（继续剩余时间）"
+        case .advanceNext: return (type == .work) ? "推进至下一步（进入休息）" : "推进至下一步（开始专注）"
         case .resetCycle: return "重置整轮（回到第1步）"
         }
     }
@@ -76,6 +87,19 @@ public struct RotationRule: Codable, Identifiable, Equatable {
     }
 }
 
+/// 自由休息到达截止阈值时的处理行为
+public enum CutoffAction: String, Codable, CaseIterable {
+    case alertAndStandby = "alert"      // 弹窗提醒（无人响应自动待机）
+    case silentAndStandby = "silent"    // 仅彻底静默（零弹窗，超时自动待机）
+    
+    public var displayName: String {
+        switch self {
+        case .alertAndStandby: return "弹窗提醒（无人响应自动待机）"
+        case .silentAndStandby: return "仅彻底静默（零弹窗，超时自动待机）"
+        }
+    }
+}
+
 /// 快捷指令风格的独立工作/休息模块
 public struct FlowBlock: Codable, Identifiable, Equatable {
     public var id: UUID
@@ -94,6 +118,7 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
     public var enableIncrementalChimes: Bool = false // 开启阶段递增报时
     public var chimeStartMinutes: Int = 20           // 起始报时阈值（如 20 分钟，响 2 下）
     public var chimeEndMinutes: Int = 40             // 截止报时阈值（如 40 分钟为最后一次，之后彻底静默）
+    public var chimeCutoffAction: CutoffAction = .alertAndStandby // 到达截止阈值时的行为（默认弹窗提醒，超时待机）
     
     /// 获取当前模块实际的完整倒计时总秒数
     public var totalCountdownSeconds: Int {
@@ -117,7 +142,8 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
         snoozeMinutes: Int = 5,
         enableIncrementalChimes: Bool = false,
         chimeStartMinutes: Int = 20,
-        chimeEndMinutes: Int = 40
+        chimeEndMinutes: Int = 40,
+        chimeCutoffAction: CutoffAction = .alertAndStandby
     ) {
         self.id = id
         self.type = type
@@ -134,12 +160,13 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
         self.enableIncrementalChimes = enableIncrementalChimes
         self.chimeStartMinutes = chimeStartMinutes
         self.chimeEndMinutes = chimeEndMinutes
+        self.chimeCutoffAction = chimeCutoffAction
     }
     
     enum CodingKeys: String, CodingKey {
         case id, type, name, durationMinutes, countdownSeconds, timingMode, targetSeconds
         case soundName, message, autoAdvance, snoozeMinutes
-        case enableIncrementalChimes, chimeStartMinutes, chimeEndMinutes
+        case enableIncrementalChimes, chimeStartMinutes, chimeEndMinutes, chimeCutoffAction
     }
     
     public init(from decoder: Decoder) throws {
@@ -159,6 +186,7 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
         self.enableIncrementalChimes = try container.decodeIfPresent(Bool.self, forKey: .enableIncrementalChimes) ?? false
         self.chimeStartMinutes = try container.decodeIfPresent(Int.self, forKey: .chimeStartMinutes) ?? 20
         self.chimeEndMinutes = try container.decodeIfPresent(Int.self, forKey: .chimeEndMinutes) ?? 40
+        self.chimeCutoffAction = try container.decodeIfPresent(CutoffAction.self, forKey: .chimeCutoffAction) ?? .alertAndStandby
     }
     
     /// 快捷创建专注模块
@@ -205,7 +233,8 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
         sound: String? = nil,
         enableChimes: Bool = false,
         chimeStart: Int = 20,
-        chimeEnd: Int = 40
+        chimeEnd: Int = 40,
+        cutoffAction: CutoffAction = .alertAndStandby
     ) -> FlowBlock {
         FlowBlock(
             type: .rest,
@@ -219,7 +248,8 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
             autoAdvance: false,
             enableIncrementalChimes: enableChimes,
             chimeStartMinutes: chimeStart,
-            chimeEndMinutes: chimeEnd
+            chimeEndMinutes: chimeEnd,
+            chimeCutoffAction: cutoffAction
         )
     }
 }
@@ -238,9 +268,19 @@ public struct Preset: Codable, Identifiable, Equatable {
     public var alertStyle: AlertStyle = .both
     public var rotation: [RotationRule] = []
     
-    // 中断恢复策略（手动待机 vs 被动待机）
-    public var manualStandbyRecovery: InterruptRecovery = .resetCurrent
-    public var passiveStandbyRecovery: InterruptRecovery = .resetCurrent
+    // 阶段打断恢复策略（专注被打断 vs 休息被打断，彻底区分人性化策略）
+    public var workInterruptRecovery: InterruptRecovery = .resetCurrent  // 专注被打断恢复（默认重置本步重新倒数）
+    public var restInterruptRecovery: InterruptRecovery = .advanceNext   // 休息被打断恢复（默认推进至下一步开始专注！）
+    
+    // 兼容历史字段
+    public var manualStandbyRecovery: InterruptRecovery {
+        get { workInterruptRecovery }
+        set { workInterruptRecovery = newValue }
+    }
+    public var passiveStandbyRecovery: InterruptRecovery {
+        get { restInterruptRecovery }
+        set { restInterruptRecovery = newValue }
+    }
     
     // 兼容历史字段
     public var mode: FlowMode {
@@ -340,8 +380,10 @@ public struct Preset: Codable, Identifiable, Equatable {
         idleMinutes: Int = 10,
         alertStyle: AlertStyle = .both,
         rotation: [RotationRule] = [],
-        manualStandbyRecovery: InterruptRecovery = .resetCurrent,
-        passiveStandbyRecovery: InterruptRecovery = .resetCurrent
+        workInterruptRecovery: InterruptRecovery = .resetCurrent,
+        restInterruptRecovery: InterruptRecovery = .advanceNext,
+        manualStandbyRecovery: InterruptRecovery? = nil,
+        passiveStandbyRecovery: InterruptRecovery? = nil
     ) {
         self.id = id
         self.name = name
@@ -350,8 +392,8 @@ public struct Preset: Codable, Identifiable, Equatable {
         self.idleMinutes = idleMinutes
         self.alertStyle = alertStyle
         self.rotation = rotation
-        self.manualStandbyRecovery = manualStandbyRecovery
-        self.passiveStandbyRecovery = passiveStandbyRecovery
+        self.workInterruptRecovery = manualStandbyRecovery ?? workInterruptRecovery
+        self.restInterruptRecovery = passiveStandbyRecovery ?? restInterruptRecovery
     }
     
     // 兼容历史旧构造器
@@ -380,8 +422,8 @@ public struct Preset: Codable, Identifiable, Equatable {
         self.idleMinutes = idleMinutes
         self.alertStyle = alertStyle
         self.rotation = rotation
-        self.manualStandbyRecovery = .resetCurrent
-        self.passiveStandbyRecovery = .resetCurrent
+        self.workInterruptRecovery = .resetCurrent
+        self.restInterruptRecovery = .advanceNext
         
         // 自动转换成流水线模块
         if mode == .pomodoro {
@@ -412,6 +454,7 @@ public struct Preset: Codable, Identifiable, Equatable {
     // MARK: - Codable 兼容解码
     enum CodingKeys: String, CodingKey {
         case id, name, blocks, restMaxMinutes, idleMinutes, alertStyle, rotation
+        case workInterruptRecovery, restInterruptRecovery
         case manualStandbyRecovery, passiveStandbyRecovery
         // 旧字段
         case workMinutes, restTimingMode, restTargetSeconds, restMinutes, longRestMinutes, longRestInterval, soundName, message
@@ -425,8 +468,12 @@ public struct Preset: Codable, Identifiable, Equatable {
         self.idleMinutes = try container.decodeIfPresent(Int.self, forKey: .idleMinutes) ?? 10
         self.alertStyle = try container.decodeIfPresent(AlertStyle.self, forKey: .alertStyle) ?? .both
         self.rotation = try container.decodeIfPresent([RotationRule].self, forKey: .rotation) ?? []
-        self.manualStandbyRecovery = try container.decodeIfPresent(InterruptRecovery.self, forKey: .manualStandbyRecovery) ?? .resetCurrent
-        self.passiveStandbyRecovery = try container.decodeIfPresent(InterruptRecovery.self, forKey: .passiveStandbyRecovery) ?? .resetCurrent
+        self.workInterruptRecovery = try container.decodeIfPresent(InterruptRecovery.self, forKey: .workInterruptRecovery)
+            ?? container.decodeIfPresent(InterruptRecovery.self, forKey: .manualStandbyRecovery)
+            ?? .resetCurrent
+        self.restInterruptRecovery = try container.decodeIfPresent(InterruptRecovery.self, forKey: .restInterruptRecovery)
+            ?? container.decodeIfPresent(InterruptRecovery.self, forKey: .passiveStandbyRecovery)
+            ?? .advanceNext
         
         if let decodedBlocks = try container.decodeIfPresent([FlowBlock].self, forKey: .blocks), !decodedBlocks.isEmpty {
             self.blocks = decodedBlocks
@@ -461,8 +508,8 @@ public struct Preset: Codable, Identifiable, Equatable {
         try container.encode(idleMinutes, forKey: .idleMinutes)
         try container.encode(alertStyle, forKey: .alertStyle)
         try container.encode(rotation, forKey: .rotation)
-        try container.encode(manualStandbyRecovery, forKey: .manualStandbyRecovery)
-        try container.encode(passiveStandbyRecovery, forKey: .passiveStandbyRecovery)
+        try container.encode(workInterruptRecovery, forKey: .workInterruptRecovery)
+        try container.encode(restInterruptRecovery, forKey: .restInterruptRecovery)
     }
     
     // MARK: - 三大标准预设模板

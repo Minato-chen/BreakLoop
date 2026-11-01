@@ -95,6 +95,9 @@ public final class TimerEngine: ObservableObject {
     private var sessionStartDate: Date?
     private var targetEndDate: Date?
     private var hasTriggeredSoftTarget: Bool = false
+    private var hasTriggeredCompletionAlert: Bool = false
+    private var hasTriggeredCutoffAlert: Bool = false
+    private var alertTriggeredDate: Date?
     private var lastRecordedMinute: Int = -1
     private var lastChimedMinute: Int = -1
     
@@ -189,16 +192,8 @@ public final class TimerEngine: ObservableObject {
         let wasInStandby = (mode == .standby)
         var shouldResumeSavedSeconds = false
         if wasInStandby {
-            let recovery = (lastStandbyReason == .manual) ? preset.manualStandbyRecovery : preset.passiveStandbyRecovery
-            switch recovery {
-            case .resume:
-                if let saved = savedRemainingSeconds, saved > 0 {
-                    shouldResumeSavedSeconds = true
-                }
-            case .resetCycle:
-                currentBlockIndex = 0
-            case .resetCurrent:
-                break
+            if let saved = savedRemainingSeconds, saved > 0 {
+                shouldResumeSavedSeconds = true
             }
         }
         
@@ -208,6 +203,9 @@ public final class TimerEngine: ObservableObject {
         
         sessionStartDate = now
         hasTriggeredSoftTarget = false
+        hasTriggeredCompletionAlert = false
+        hasTriggeredCutoffAlert = false
+        alertTriggeredDate = nil
         lastRecordedMinute = -1
         lastChimedMinute = -1
         isPaused = false
@@ -279,12 +277,18 @@ public final class TimerEngine: ObservableObject {
     public func enterStandby(reason: EndReason = .manual, at time: Date? = nil) {
         guard mode != .standby else { return }
         let endAt = time ?? nowProvider()
+        let previousMode = mode
+        let interruptedBlock = currentBlock
         
         lastStandbyReason = reason
         savedRemainingSeconds = isPaused ? (remainingSecondsOnPause ?? currentSeconds) : currentSeconds
         isPaused = false
         pauseStartTime = nil
         remainingSecondsOnPause = nil
+        alertTriggeredDate = nil
+        hasTriggeredCompletionAlert = false
+        hasTriggeredCutoffAlert = false
+        AlertManager.shared.closePanel()
         
         closeCurrentSession(endedAt: endAt, reason: reason)
         stopTimers()
@@ -295,6 +299,33 @@ public final class TimerEngine: ObservableObject {
         targetEndDate = nil
         isLongRest = false
         lastRecordedMinute = -1
+        
+        // 区分专注被打断 vs 休息被打断的不同恢复策略
+        let recovery: InterruptRecovery
+        if previousMode == .resting || interruptedBlock?.type == .rest {
+            recovery = preset.restInterruptRecovery
+        } else {
+            recovery = preset.workInterruptRecovery
+        }
+        
+        switch recovery {
+        case .advanceNext:
+            let nextIndex = currentBlockIndex + 1
+            if nextIndex >= preset.blocks.count {
+                incrementCompletedCycles()
+                currentBlockIndex = 0
+            } else {
+                currentBlockIndex = nextIndex
+            }
+            savedRemainingSeconds = nil
+        case .resetCycle:
+            currentBlockIndex = 0
+            savedRemainingSeconds = nil
+        case .resetCurrent:
+            savedRemainingSeconds = nil
+        case .resume:
+            break
+        }
         
         resetToCurrentBlock()
         refreshTodayStats()
@@ -421,8 +452,23 @@ public final class TimerEngine: ObservableObject {
             let remaining = targetEnd.timeIntervalSince(now)
             if remaining <= 0 {
                 currentSeconds = 0
-                triggerAlert(for: block, actionType: .workCompleted)
-                advanceToNextBlock()
+                if !hasTriggeredCompletionAlert {
+                    hasTriggeredCompletionAlert = true
+                    triggerAlert(for: block, actionType: .workCompleted)
+                    alertTriggeredDate = now
+                    if block.autoAdvance {
+                        advanceToNextBlock()
+                        return
+                    }
+                }
+                
+                // 未开启自动推进时：若弹窗弹出超过 3 分钟未操作且空闲，安全转入待机
+                if let alertDate = alertTriggeredDate, now.timeIntervalSince(alertDate) >= 180 {
+                    alertTriggeredDate = nil
+                    AlertManager.shared.closePanel()
+                    enterStandby(reason: .idle, at: now)
+                    return
+                }
             } else {
                 currentSeconds = max(0, Int(ceil(remaining)))
             }
@@ -433,14 +479,29 @@ public final class TimerEngine: ObservableObject {
                 let remaining = targetEnd.timeIntervalSince(now)
                 if remaining <= 0 {
                     currentSeconds = 0
-                    triggerAlert(for: block, actionType: .restCompleted)
-                    if block.autoAdvance {
-                        advanceToNextBlock()
-                    } else {
-                        let maxAllowedSeconds = Double(preset.restMaxMinutes * 60)
-                        if let start = sessionStartDate, now.timeIntervalSince(start) >= maxAllowedSeconds {
-                            enterStandby(reason: .restTimeout, at: now)
+                    if !hasTriggeredCompletionAlert {
+                        hasTriggeredCompletionAlert = true
+                        triggerAlert(for: block, actionType: .restCompleted)
+                        alertTriggeredDate = now
+                        if block.autoAdvance {
+                            advanceToNextBlock()
+                            return
                         }
+                    }
+                    
+                    // 倒计时休息结束：若弹窗弹出超过 3 分钟无人点击，绝不对空房假装专注，自动转入待机
+                    if let alertDate = alertTriggeredDate, now.timeIntervalSince(alertDate) >= 180 {
+                        alertTriggeredDate = nil
+                        AlertManager.shared.closePanel()
+                        enterStandby(reason: .restTimeout, at: now)
+                        return
+                    }
+                    
+                    let maxAllowedSeconds = Double(preset.restMaxMinutes * 60)
+                    if let start = sessionStartDate, now.timeIntervalSince(start) >= maxAllowedSeconds {
+                        AlertManager.shared.closePanel()
+                        enterStandby(reason: .restTimeout, at: now)
+                        return
                     }
                 } else {
                     currentSeconds = max(0, Int(ceil(remaining)))
@@ -448,10 +509,10 @@ public final class TimerEngine: ObservableObject {
             } else {
                 guard let start = sessionStartDate else { return }
                 let elapsed = now.timeIntervalSince(start)
+                let elapsedMinutes = Int(elapsed) / 60
                 
                 // 阶段递增轻报时：纯声音、绝不弹窗、计时不暂停
                 if block.enableIncrementalChimes {
-                    let elapsedMinutes = Int(elapsed) / 60
                     if elapsedMinutes >= block.chimeStartMinutes && elapsedMinutes <= block.chimeEndMinutes {
                         if elapsedMinutes != lastChimedMinute && (elapsedMinutes == block.chimeStartMinutes || elapsedMinutes % 10 == 0) {
                             lastChimedMinute = elapsedMinutes
@@ -459,10 +520,30 @@ public final class TimerEngine: ObservableObject {
                             SoundManager.shared.playChimes(soundName: block.soundName, count: chimes)
                         }
                     }
+                    
+                    // 到达截止阈值 (chimeEndMinutes)
+                    if elapsedMinutes >= block.chimeEndMinutes {
+                        if !hasTriggeredCutoffAlert {
+                            hasTriggeredCutoffAlert = true
+                            if block.chimeCutoffAction == .alertAndStandby {
+                                triggerAlert(for: block, actionType: .restCompleted)
+                                alertTriggeredDate = now
+                            }
+                        }
+                    }
+                }
+                
+                // 自由休息截止弹窗超时未操作（3 分钟无响应） -> 自动进入待机
+                if let alertDate = alertTriggeredDate, now.timeIntervalSince(alertDate) >= 180 {
+                    alertTriggeredDate = nil
+                    AlertManager.shared.closePanel()
+                    enterStandby(reason: .restTimeout, at: now)
+                    return
                 }
                 
                 let maxAllowedSeconds = Double(preset.restMaxMinutes * 60)
                 if elapsed >= maxAllowedSeconds {
+                    AlertManager.shared.closePanel()
                     enterStandby(reason: .restTimeout, at: now)
                     return
                 }

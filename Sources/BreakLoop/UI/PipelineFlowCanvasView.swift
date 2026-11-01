@@ -183,31 +183,31 @@ public struct PipelineFlowCanvasView: View {
             
             VStack(spacing: 6) {
                 HStack {
-                    Text("手动待机后恢复:")
+                    Text("💻 专注被打断恢复:")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
-                    Picker("", selection: $preset.manualStandbyRecovery) {
+                    Picker("", selection: $preset.workInterruptRecovery) {
                         ForEach(InterruptRecovery.allCases, id: \.self) { r in
-                            Text(r.displayName).tag(r)
+                            Text(r.displayName(for: .work)).tag(r)
                         }
                     }
                     .labelsHidden()
-                    .frame(width: 170)
+                    .frame(width: 175)
                 }
                 
                 HStack {
-                    Text("屏保/离开后恢复:")
+                    Text("☕️ 休息被打断恢复:")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
-                    Picker("", selection: $preset.passiveStandbyRecovery) {
+                    Picker("", selection: $preset.restInterruptRecovery) {
                         ForEach(InterruptRecovery.allCases, id: \.self) { r in
-                            Text(r.displayName).tag(r)
+                            Text(r.displayName(for: .rest)).tag(r)
                         }
                     }
                     .labelsHidden()
-                    .frame(width: 170)
+                    .frame(width: 175)
                 }
             }
             .padding(10)
@@ -608,7 +608,21 @@ public struct PipelineFlowCanvasView: View {
                                         Spacer()
                                     }
                                     
-                                    Text("💡 在 \(block.chimeStartMinutes)m ~ \(block.chimeEndMinutes)m 区间内，到达起始分钟及后续每 10 分钟按时段轻响对应次数（如 20分响2下、30分响3下）；到达截止阈值后彻底静默。")
+                                    HStack(spacing: 6) {
+                                        Text("到达截止阈值时:")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Picker("", selection: binding(for: index).chimeCutoffAction) {
+                                            ForEach(CutoffAction.allCases, id: \.self) { action in
+                                                Text(action.displayName).tag(action)
+                                            }
+                                        }
+                                        .labelsHidden()
+                                        .pickerStyle(.menu)
+                                        .frame(width: 220)
+                                    }
+                                    
+                                    Text("💡 在 \(block.chimeStartMinutes)m ~ \(block.chimeEndMinutes)m 区间内，到达起始分钟及后续每 10 分钟按时段轻响对应次数（如 20分响2下、30分响3下）；到达截止阈值时执行上述设定。")
                                         .font(.system(size: 11))
                                         .foregroundColor(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -667,10 +681,10 @@ public struct PipelineFlowCanvasView: View {
                         
                         // (3) 提示文案（通栏宽框）
                         HStack(spacing: 6) {
-                            Text("提示文案:")
+                            Text(block.timingMode == .stopwatch && block.enableIncrementalChimes ? "截止弹窗文案:" : "提示文案:")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            TextField("如：看远方 20 秒、喝水深呼吸...", text: binding(for: index).message)
+                            TextField(block.timingMode == .stopwatch ? "休息结束，准备开始下一轮专注" : "如：看远方 20 秒、喝水深呼吸...", text: binding(for: index).message)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(size: 12))
                                 .frame(maxWidth: .infinity)

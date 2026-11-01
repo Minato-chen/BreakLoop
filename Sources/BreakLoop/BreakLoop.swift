@@ -24,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 onPrimaryAction: { [weak self] in
                     guard let self = self else { return }
                     if event.actionType == .restCompleted {
+                        self.engine.advanceToNextBlock()
+                    } else if event.actionType == .workCompleted {
                         if !self.engine.preset.blocks[self.engine.currentBlockIndex].autoAdvance {
                             self.engine.advanceToNextBlock()
                         }

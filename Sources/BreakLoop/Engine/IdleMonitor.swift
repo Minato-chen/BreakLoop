@@ -11,6 +11,7 @@ public final class IdleMonitor {
     
     // 空闲判定轮询周期（秒）
     public var pollInterval: TimeInterval = 15.0
+    private var sleepStartDate: Date?
     
     public init(engine: TimerEngine? = nil) {
         self.engine = engine
@@ -29,12 +30,18 @@ public final class IdleMonitor {
             self?.checkIdle()
         }
         
-        // 2. 监听系统休眠与合盖通知
+        // 2. 监听系统休眠、开盖唤醒与合盖通知
         let wsCenter = NSWorkspace.shared.notificationCenter
         wsCenter.addObserver(
             self,
             selector: #selector(handleWillSleep),
             name: NSWorkspace.willSleepNotification,
+            object: nil
+        )
+        wsCenter.addObserver(
+            self,
+            selector: #selector(handleDidWake),
+            name: NSWorkspace.didWakeNotification,
             object: nil
         )
         wsCenter.addObserver(
@@ -78,6 +85,17 @@ public final class IdleMonitor {
         // 键鼠最后事件空闲时间（秒）
         let idleSeconds = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0)!)
         
+        // 休息阶段：离开工位属于健康行为，豁免 10 分钟常规键鼠检测；仅当超过休息上限时才判定超时
+        if engine.mode == .resting {
+            let restLimitMinutes = max(engine.currentBlock?.chimeEndMinutes ?? engine.preset.restMaxMinutes, engine.preset.restMaxMinutes)
+            let restLimitSeconds = Double(restLimitMinutes * 60)
+            if idleSeconds >= restLimitSeconds {
+                let lastActivityDate = engine.nowProvider().addingTimeInterval(-idleSeconds)
+                engine.enterStandby(reason: .idle, at: lastActivityDate)
+            }
+            return
+        }
+        
         let configuredMins = UserDefaults.standard.object(forKey: "BreakLoop.IdleTimeoutMinutes") as? Int
         let idleMinutes = configuredMins ?? engine.preset.idleMinutes
         let idleLimitSeconds = Double(idleMinutes * 60)
@@ -91,27 +109,61 @@ public final class IdleMonitor {
     
     // MARK: - 系统事件回调
     @objc private func handleWillSleep() {
-        engine?.enterStandby(reason: .sleep)
+        guard let engine = engine, engine.mode != .standby else { return }
+        if engine.mode == .resting {
+            // 休息阶段：记录盒盖时间戳，唤醒时再按盒盖时长结算
+            sleepStartDate = engine.nowProvider()
+        } else {
+            // 专注阶段：盒盖直接进待机
+            engine.enterStandby(reason: .sleep)
+        }
+    }
+    
+    @objc private func handleDidWake() {
+        guard let engine = engine, engine.mode == .resting, let sleepStart = sleepStartDate else {
+            sleepStartDate = nil
+            return
+        }
+        let now = engine.nowProvider()
+        let sleepDuration = now.timeIntervalSince(sleepStart)
+        sleepStartDate = nil
+        
+        let maxRestMins = max(engine.currentBlock?.chimeEndMinutes ?? engine.preset.restMaxMinutes, engine.preset.restMaxMinutes)
+        let maxRestSeconds = Double(maxRestMins * 60)
+        
+        if sleepDuration > maxRestSeconds {
+            // 盒盖时长远超休息阈值（如睡了几小时或已离开），以休息上限封顶结束并进入待机
+            let cappedEndDate = sleepStart.addingTimeInterval(maxRestSeconds)
+            engine.enterStandby(reason: .restTimeout, at: cappedEndDate)
+        }
     }
     
     @objc private func handleScreensDidSleep() {
+        guard let engine = engine, engine.mode != .standby else { return }
+        // 休息阶段允许黑屏闭目养神，不打断休息
+        if engine.mode == .resting { return }
         let autoStandbyOnScreenSaver = UserDefaults.standard.object(forKey: "BreakLoop.AutoStandbyOnScreenSaver") as? Bool ?? true
         if autoStandbyOnScreenSaver {
-            engine?.enterStandby(reason: .locked)
+            engine.enterStandby(reason: .locked)
         }
     }
     
     @objc private func handleScreenLocked() {
+        guard let engine = engine, engine.mode != .standby else { return }
+        // 休息阶段锁屏不打断休息计时
+        if engine.mode == .resting { return }
         let autoStandbyOnScreenSaver = UserDefaults.standard.object(forKey: "BreakLoop.AutoStandbyOnScreenSaver") as? Bool ?? true
         if autoStandbyOnScreenSaver {
-            engine?.enterStandby(reason: .locked)
+            engine.enterStandby(reason: .locked)
         }
     }
     
     @objc private func handleScreenSaverStarted() {
+        guard let engine = engine, engine.mode != .standby else { return }
+        if engine.mode == .resting { return }
         let autoStandbyOnScreenSaver = UserDefaults.standard.object(forKey: "BreakLoop.AutoStandbyOnScreenSaver") as? Bool ?? true
         if autoStandbyOnScreenSaver {
-            engine?.enterStandby(reason: .locked)
+            engine.enterStandby(reason: .locked)
         }
     }
 }

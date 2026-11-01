@@ -271,14 +271,14 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(engine.currentBlock?.timingMode, .countdown)
         XCTAssertEqual(engine.currentSeconds, 5 * 60)
         
-        // 2. 任意位置跳出待机测试（在第 2 步休息中挂起进入待机）
+        // 2. 任意位置跳出待机测试（在第 2 步休息中挂起进入待机，默认推进至下一步专注）
         engine.enterStandby(reason: .manual)
         XCTAssertEqual(engine.mode, .standby)
-        // 验证待机后不会丢失当前模块定位
-        XCTAssertEqual(engine.currentBlockIndex, 1)
+        XCTAssertEqual(engine.currentBlockIndex, 2)
+        XCTAssertEqual(engine.currentBlock?.name, "深度工作")
         
-        // 3. 从待机唤醒并跳转到第 3 步 (深度工作 30m)
-        engine.jumpToBlock(index: 2)
+        // 3. 从待机启动第 3 步 (深度工作 30m)
+        engine.startCurrentBlock()
         XCTAssertEqual(engine.currentBlockIndex, 2)
         XCTAssertEqual(engine.mode, .working)
         XCTAssertEqual(engine.currentBlock?.name, "深度工作")
@@ -510,7 +510,7 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertFalse(engine.isPaused)
     }
     
-    // MARK: - 测试 14: 打断恢复策略 (重置本步 / 断点续传 / 重置整轮)
+    // MARK: - 测试 14: 打断恢复策略 (区分专注被打断 vs 休息被打断)
     func testInterruptionRecoveryStrategy() {
         let preset = Preset(
             name: "RecoveryTest",
@@ -519,8 +519,8 @@ final class BreakLoopTests: XCTestCase {
                 FlowBlock.makeCountdownRest(name: "短休 1", minutes: 5),
                 FlowBlock.makeWork(name: "番茄 2", minutes: 20)
             ],
-            manualStandbyRecovery: .resume,
-            passiveStandbyRecovery: .resetCurrent
+            workInterruptRecovery: .resume,       // 专注被打断：断点续传
+            restInterruptRecovery: .advanceNext   // 休息被打断：推进至下一步（开始新一轮专注）
         )
         let engine = TimerEngine(
             preset: preset,
@@ -535,19 +535,32 @@ final class BreakLoopTests: XCTestCase {
         engine.tick()
         XCTAssertEqual(engine.currentSeconds, 15 * 60)
         
-        // 手动待机 (策略: .resume 断点续传)
+        // 专注期间手动待机 (策略: .resume 断点续传)
         engine.enterStandby(reason: .manual)
         XCTAssertEqual(engine.mode, .standby)
+        XCTAssertEqual(engine.currentBlockIndex, 0)
         
-        // 重新启动：由于策略为 .resume，应当保留还剩 15 分钟继续倒数
+        // 重新启动：由于策略为 .resume，保留还剩 15 分钟继续倒数
         engine.startCurrentBlock()
         XCTAssertEqual(engine.mode, .working)
         XCTAssertEqual(engine.currentSeconds, 15 * 60)
         
-        // 再次被动待机（如锁屏 .locked，策略: .resetCurrent 重置当前步）
-        engine.enterStandby(reason: .locked)
+        // 推进到休息阶段 (短休 1)
+        simulatedDate.addTimeInterval(15 * 60)
+        engine.tick()
+        XCTAssertEqual(engine.currentBlockIndex, 1)
+        XCTAssertEqual(engine.mode, .resting)
+        
+        // 休息期间发生待机（策略: .advanceNext 推进至下一步）
+        engine.enterStandby(reason: .idle)
+        XCTAssertEqual(engine.mode, .standby)
+        // 验证已自动切到下一步（番茄 2 专注）
+        XCTAssertEqual(engine.currentBlockIndex, 2)
+        XCTAssertEqual(engine.currentBlock?.name, "番茄 2")
+        
+        // 启动番茄 2
         engine.startCurrentBlock()
-        // 应当重新计满 20 分钟
+        XCTAssertEqual(engine.mode, .working)
         XCTAssertEqual(engine.currentSeconds, 20 * 60)
     }
     
@@ -679,5 +692,49 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(shouldChimeAndCount(atMinute: 40), 4)
         XCTAssertNil(shouldChimeAndCount(atMinute: 41))
         XCTAssertNil(shouldChimeAndCount(atMinute: 50))
+    }
+    
+    // MARK: - 测试 18: 自由休息截止阈值弹窗提醒与超时自动转待机
+    func testStopwatchCutoffAlertAndAutoStandby() {
+        let preset = Preset(
+            name: "CutoffStandbyTest",
+            blocks: [
+                FlowBlock.makeWork(name: "专注", minutes: 20),
+                FlowBlock.makeStopwatchRest(name: "自由休息", enableChimes: true, chimeStart: 20, chimeEnd: 40, cutoffAction: .alertAndStandby)
+            ],
+            restMaxMinutes: 45
+        )
+        var receivedAlerts: [AlertTriggerEvent] = []
+        let engine = TimerEngine(
+            preset: preset,
+            sessionStore: sessionStore,
+            userDefaults: mockUserDefaults,
+            nowProvider: { [weak self] in self?.simulatedDate ?? Date() }
+        )
+        engine.onAlertTriggered = { event in
+            receivedAlerts.append(event)
+        }
+        
+        // 1. 跳到休息步并启动
+        engine.jumpToBlock(index: 1)
+        XCTAssertEqual(engine.mode, .resting)
+        XCTAssertEqual(engine.currentBlock?.timingMode, .stopwatch)
+        
+        // 2. 模拟运行到 40 分钟截止阈值
+        simulatedDate.addTimeInterval(40 * 60)
+        engine.tick()
+        XCTAssertEqual(receivedAlerts.count, 1)
+        XCTAssertEqual(receivedAlerts.first?.actionType, .restCompleted)
+        XCTAssertEqual(engine.mode, .resting)
+        
+        // 3. 用户离开工位未按弹窗，经过 3 分钟 (180 秒)
+        simulatedDate.addTimeInterval(180)
+        engine.tick()
+        
+        // 验证：已安全自动转入待机模式，绝不在空房间假装专注
+        XCTAssertEqual(engine.mode, .standby)
+        // 验证：打断恢复策略自动将下一步推进至“专注”
+        XCTAssertEqual(engine.currentBlockIndex, 0)
+        XCTAssertEqual(engine.currentBlock?.type, .work)
     }
 }
