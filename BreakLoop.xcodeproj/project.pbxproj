@@ -25,6 +25,7 @@
 		8BA78EE55CAAD60EEAC5D0CC /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF4A57CCFFD1832182EB043 /* Session.swift */; };
 		8EE601EA301019CFA55C5567 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7DF3E0AEA9D8E4B21C085D80 /* Assets.xcassets */; };
 		98A1E894465D89578D6C03AE /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91B8C9FD9DAFF78A8BFFB397 /* SettingsView.swift */; };
+		A03A4121600D99AE84A236C3 /* ConfigBackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9766FCD5A28585573A1E2805 /* ConfigBackupManager.swift */; };
 		A03A4121600D99AE84A236B2 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9766FCD5A28585573A1E2804 /* UpdateChecker.swift */; };
 		A081789C4B2C62A1DFD205A1 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F461811D315F9F467BDEAF10 /* SoundManager.swift */; };
 		A513F2C3B768E1380858EA5D /* TimerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 306B71291AB988C7E3F81D10 /* TimerEngine.swift */; };
@@ -92,6 +93,7 @@
 		819E48A2A0A4FC3B4FD04E75 /* Preset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preset.swift; sourceTree = "<group>"; };
 		8BC184D1D79B788BB53EF010 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		91B8C9FD9DAFF78A8BFFB397 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		9766FCD5A28585573A1E2805 /* ConfigBackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigBackupManager.swift; sourceTree = "<group>"; };
 		9766FCD5A28585573A1E2804 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
 		976DACB2F1F4547F8C5D4702 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
 		9DE989FB41DB60B78F4F8C75 /* BreakLoopWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakLoopWidget.swift; sourceTree = "<group>"; };
@@ -114,6 +116,7 @@
 				0A3C0F6A91B0FB19D28986EA /* HotKeys.swift */,
 				8BC184D1D79B788BB53EF010 /* LaunchAtLogin.swift */,
 				2280862E87551D5ECD4971F9 /* TimeFormatter.swift */,
+				9766FCD5A28585573A1E2805 /* ConfigBackupManager.swift */,
 				9766FCD5A28585573A1E2804 /* UpdateChecker.swift */,
 			);
 			path = Support;
@@ -352,6 +355,7 @@
 				B0BDC95ECF595FD2E73E845A /* StatsView.swift in Sources */,
 				FE936C90F30B52495D639358 /* TimeFormatter.swift in Sources */,
 				A513F2C3B768E1380858EA5D /* TimerEngine.swift in Sources */,
+				A03A4121600D99AE84A236C3 /* ConfigBackupManager.swift in Sources */,
 				A03A4121600D99AE84A236B2 /* UpdateChecker.swift in Sources */,
 				C4688C61927111448E06AFF0 /* WidgetSharedData.swift in Sources */,
 			);
@@ -422,7 +426,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BreakLoopWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -430,7 +434,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.breakloop.BreakLoop.WidgetExtension;
 				SDKROOT = macosx;
 			};
@@ -441,14 +445,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = "BreakLoop-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.breakloop.BreakLoop;
 				SDKROOT = macosx;
 			};
@@ -517,7 +521,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BreakLoopWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -525,7 +529,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.breakloop.BreakLoop.WidgetExtension;
 				SDKROOT = macosx;
 			};
@@ -536,14 +540,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = "BreakLoop-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.breakloop.BreakLoop;
 				SDKROOT = macosx;
 			};

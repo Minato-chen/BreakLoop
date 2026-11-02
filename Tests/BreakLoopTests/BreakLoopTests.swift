@@ -1143,4 +1143,153 @@ final class BreakLoopTests: XCTestCase {
         XCTAssertEqual(engine.currentBlockIndex, 0)
         XCTAssertEqual(engine.currentBlock?.name, "工作 1")
     }
+    
+    // MARK: - 测试 27: 容错安全解码（坏一个不影响其余正常方案）
+    func testPresetStoreSafeLossyDecoding() {
+        let p1 = Preset(name: "正常方案A", blocks: [FlowBlock.makeWork(minutes: 25)])
+        let p2 = Preset(name: "正常方案B", blocks: [FlowBlock.makeCountdownRest(minutes: 5)])
+        
+        let encoder = JSONEncoder()
+        guard let p1Data = try? encoder.encode(p1),
+              let p2Data = try? encoder.encode(p2),
+              let p1Dict = try? JSONSerialization.jsonObject(with: p1Data) as? [String: Any],
+              let p2Dict = try? JSONSerialization.jsonObject(with: p2Data) as? [String: Any] else {
+            XCTFail("准备测试数据失败")
+            return
+        }
+        
+        // 构造包含一个恶意/损坏对象的数组
+        let corruptedDict: [String: Any] = [
+            "id": "not-a-valid-uuid",
+            "name": 12345, // 错误的类型
+            "blocks": "broken"
+        ]
+        
+        let mixedArray = [p1Dict, corruptedDict, p2Dict]
+        guard let mixedData = try? JSONSerialization.data(withJSONObject: mixedArray) else {
+            XCTFail("序列化测试混合数据失败")
+            return
+        }
+        
+        // 验证：标准解码必抛异常，但 decodePresetsLossy 能安全救回其余 2 个方案！
+        let standardDecoded = try? JSONDecoder().decode([Preset].self, from: mixedData)
+        XCTAssertNil(standardDecoded, "全量标准解码在有坏项时应当失败")
+        
+        let lossyDecoded = PresetStore.decodePresetsLossy(from: mixedData)
+        XCTAssertNotNil(lossyDecoded)
+        XCTAssertEqual(lossyDecoded?.count, 2)
+        XCTAssertEqual(lossyDecoded?[0].name, "正常方案A")
+        XCTAssertEqual(lossyDecoded?[1].name, "正常方案B")
+    }
+    
+    // MARK: - 测试 28: 配置备份包导出与恢复（合并模式 & 覆盖模式 & 引擎同步）
+    @MainActor
+    func testConfigBackupManagerExportAndImport() {
+        let manager = ConfigBackupManager.shared
+        
+        // 1. 导出当前备份
+        guard let backupData = manager.generateBackupPackageData() else {
+            XCTFail("生成备份失败")
+            return
+        }
+        
+        // 2. 模拟合并导入 (Merge)
+        let initialCount = PresetStore.shared.presets.count
+        let mergeResult = manager.importBackup(data: backupData, mode: .merge)
+        switch mergeResult {
+        case .success(let res):
+            XCTAssertTrue(res.message.contains("已合并导入"))
+            XCTAssertNotNil(res.targetPresetId)
+            XCTAssertEqual(PresetStore.shared.presets.count, initialCount * 2)
+        case .failure(let err):
+            XCTFail("合并导入失败: \(err.localizedDescription)")
+        }
+        
+        // 3. 模拟覆盖还原 (Overwrite)
+        let _ = TimerEngine(preset: PresetStore.shared.activePreset)
+        var restoredNotificationFired = false
+        let token = NotificationCenter.default.addObserver(forName: .breakLoopConfigRestored, object: nil, queue: .main) { _ in
+            restoredNotificationFired = true
+        }
+        defer { NotificationCenter.default.removeObserver(token) }
+        
+        let overwriteResult = manager.importBackup(data: backupData, mode: .overwrite)
+        switch overwriteResult {
+        case .success(let res):
+            XCTAssertTrue(res.message.contains("已完整还原"))
+            XCTAssertEqual(PresetStore.shared.presets.count, initialCount)
+            XCTAssertTrue(restoredNotificationFired)
+        case .failure(let err):
+            XCTFail("覆盖还原失败: \(err.localizedDescription)")
+        }
+    }
+    
+    // MARK: - 测试 29: 单方案导出与导入
+    @MainActor
+    func testSinglePresetExportAndImport() {
+        let manager = ConfigBackupManager.shared
+        let customPreset = Preset(name: "深度自习方案", blocks: [
+            FlowBlock.makeWork(name: "高强度自习", minutes: 50),
+            FlowBlock.makeCountdownRest(name: "伸展放松", minutes: 10)
+        ])
+        
+        guard let singleData = manager.generateSinglePresetData(preset: customPreset) else {
+            XCTFail("生成单方案导出数据失败")
+            return
+        }
+        
+        let initialCount = PresetStore.shared.presets.count
+        let importResult = manager.importBackup(data: singleData, mode: .merge)
+        switch importResult {
+        case .success(let res):
+            XCTAssertTrue(res.message.contains("深度自习方案"))
+            XCTAssertEqual(PresetStore.shared.presets.count, initialCount + 1)
+            XCTAssertTrue(PresetStore.shared.presets.contains(where: { $0.name == "深度自习方案" }))
+            XCTAssertEqual(res.targetPresetId, PresetStore.shared.presets.last?.id)
+        case .failure(let err):
+            XCTFail("导入单方案失败: \(err.localizedDescription)")
+        }
+    }
+    
+    // MARK: - 测试 30: 模块级与方案级容错容灾解码（未知枚举、缺失字段默认兜底）
+    func testBlockLevelFaultTolerantDecoding() throws {
+        // 1. 模拟未来版本包含未知 block type 或 timingMode 的 json
+        let damagedBlockJSON = """
+        {
+            "name": "未来神秘步骤",
+            "type": "unknown_future_mode_999",
+            "durationMinutes": -5,
+            "timingMode": "hyperdrive_mode"
+        }
+        """.data(using: .utf8)!
+        
+        let decodedBlock = try JSONDecoder().decode(FlowBlock.self, from: damagedBlockJSON)
+        XCTAssertEqual(decodedBlock.type, .work, "未知模块类型应安全降级为 work")
+        XCTAssertEqual(decodedBlock.timingMode, .countdown, "工作模块应强制为倒计时")
+        XCTAssertEqual(decodedBlock.durationMinutes, 1, "非法时长应安全兜底为 1 分钟")
+        XCTAssertEqual(decodedBlock.name, "未来神秘步骤")
+        XCTAssertNotNil(decodedBlock.id)
+        
+        // 2. 模拟完全损坏或为空的 Preset blocks
+        let emptyPresetJSON = """
+        {
+            "name": "空步骤方案"
+        }
+        """.data(using: .utf8)!
+        let decodedPreset = try JSONDecoder().decode(Preset.self, from: emptyPresetJSON)
+        XCTAssertEqual(decodedPreset.name, "空步骤方案")
+        XCTAssertFalse(decodedPreset.blocks.isEmpty, "空 blocks 方案必须兜底初始化至少 1 专注 + 1 休息模块")
+    }
+    
+    // MARK: - 测试 31: 导出文件名特殊字符安全清洗
+    @MainActor
+    func testFileNameSanitization() {
+        XCTAssertEqual(ConfigBackupManager.sanitizeFileName("20/20/20 方案"), "20-20-20 方案")
+        XCTAssertEqual(ConfigBackupManager.sanitizeFileName("专注:深度*工作?"), "专注-深度-工作")
+        XCTAssertEqual(ConfigBackupManager.sanitizeFileName("///"), "Preset")
+        XCTAssertEqual(ConfigBackupManager.sanitizeFileName(""), "Preset")
+        XCTAssertEqual(ConfigBackupManager.sanitizeFileName("   "), "Preset")
+        XCTAssertEqual(ConfigBackupManager.sanitizeFileName("."), "Preset")
+        XCTAssertEqual(ConfigBackupManager.sanitizeFileName("标准方案"), "标准方案")
+    }
 }

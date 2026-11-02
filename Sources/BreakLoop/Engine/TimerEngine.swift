@@ -118,6 +118,7 @@ public final class TimerEngine: ObservableObject {
     private var tickTimer: Timer?
     private var heartbeatCounter: Int = 0
     private let userDefaults: UserDefaults
+    private var configRestoredObserver: NSObjectProtocol?
     
     public init(
         preset: Preset? = nil,
@@ -144,9 +145,29 @@ public final class TimerEngine: ObservableObject {
         sessionStore.recoverUnfinishedSessionIfNeeded()
         refreshTodayStats()
         updateMenuBarText()
+        
+        self.configRestoredObserver = NotificationCenter.default.addObserver(
+            forName: .breakLoopConfigRestored,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            let active = PresetStore.shared.activePreset
+            if self.mode == .standby {
+                self.preset = active
+            } else if let matching = PresetStore.shared.presets.first(where: { $0.id == self.preset.id }) {
+                self.preset = matching
+            } else {
+                self.preset = active
+            }
+            self.updateMenuBarText()
+        }
     }
     
     deinit {
+        if let obs = configRestoredObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
         stopTimers()
     }
     

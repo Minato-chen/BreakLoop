@@ -175,22 +175,24 @@ public struct FlowBlock: Codable, Identifiable, Equatable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
-        self.type = try container.decode(FlowBlockType.self, forKey: .type)
-        self.name = try container.decode(String.self, forKey: .name)
-        self.durationMinutes = try container.decode(Int.self, forKey: .durationMinutes)
-        self.countdownSeconds = try container.decodeIfPresent(Int.self, forKey: .countdownSeconds)
-        let rawTimingMode = try container.decode(BlockTimingMode.self, forKey: .timingMode)
-        self.timingMode = (self.type == .work) ? .countdown : rawTimingMode
-        self.targetSeconds = try container.decodeIfPresent(Int.self, forKey: .targetSeconds)
-        self.soundName = try container.decodeIfPresent(String.self, forKey: .soundName) ?? "Glass"
-        self.message = try container.decodeIfPresent(String.self, forKey: .message) ?? ""
-        self.autoAdvance = try container.decodeIfPresent(Bool.self, forKey: .autoAdvance) ?? true
-        self.snoozeMinutes = try container.decodeIfPresent(Int.self, forKey: .snoozeMinutes) ?? 5
-        self.enableIncrementalChimes = try container.decodeIfPresent(Bool.self, forKey: .enableIncrementalChimes) ?? false
-        self.chimeStartMinutes = try container.decodeIfPresent(Int.self, forKey: .chimeStartMinutes) ?? 20
-        self.chimeEndMinutes = try container.decodeIfPresent(Int.self, forKey: .chimeEndMinutes) ?? 40
-        self.chimeCutoffAction = try container.decodeIfPresent(CutoffAction.self, forKey: .chimeCutoffAction) ?? .alertAndStandby
+        self.id = (try? container.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
+        let decodedType = (try? container.decodeIfPresent(FlowBlockType.self, forKey: .type)) ?? .work
+        self.type = decodedType
+        self.name = (try? container.decodeIfPresent(String.self, forKey: .name)) ?? (decodedType == .work ? "专注" : "休息")
+        let decodedDuration = (try? container.decodeIfPresent(Int.self, forKey: .durationMinutes)) ?? (decodedType == .work ? 20 : 5)
+        self.durationMinutes = max(1, decodedDuration)
+        self.countdownSeconds = try? container.decodeIfPresent(Int.self, forKey: .countdownSeconds)
+        let rawTimingMode = (try? container.decodeIfPresent(BlockTimingMode.self, forKey: .timingMode)) ?? .countdown
+        self.timingMode = (decodedType == .work) ? .countdown : rawTimingMode
+        self.targetSeconds = try? container.decodeIfPresent(Int.self, forKey: .targetSeconds)
+        self.soundName = (try? container.decodeIfPresent(String.self, forKey: .soundName)) ?? "Glass"
+        self.message = (try? container.decodeIfPresent(String.self, forKey: .message)) ?? ""
+        self.autoAdvance = (try? container.decodeIfPresent(Bool.self, forKey: .autoAdvance)) ?? true
+        self.snoozeMinutes = (try? container.decodeIfPresent(Int.self, forKey: .snoozeMinutes)) ?? 5
+        self.enableIncrementalChimes = (try? container.decodeIfPresent(Bool.self, forKey: .enableIncrementalChimes)) ?? false
+        self.chimeStartMinutes = (try? container.decodeIfPresent(Int.self, forKey: .chimeStartMinutes)) ?? 20
+        self.chimeEndMinutes = (try? container.decodeIfPresent(Int.self, forKey: .chimeEndMinutes)) ?? 40
+        self.chimeCutoffAction = (try? container.decodeIfPresent(CutoffAction.self, forKey: .chimeCutoffAction)) ?? .alertAndStandby
     }
     
     /// 快捷创建专注模块
@@ -466,29 +468,29 @@ public struct Preset: Codable, Identifiable, Equatable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
+        self.id = (try? container.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
         self.name = try container.decode(String.self, forKey: .name)
-        self.restMaxMinutes = try container.decodeIfPresent(Int.self, forKey: .restMaxMinutes) ?? 30
-        self.idleMinutes = try container.decodeIfPresent(Int.self, forKey: .idleMinutes) ?? 10
-        self.alertStyle = try container.decodeIfPresent(AlertStyle.self, forKey: .alertStyle) ?? .both
-        self.rotation = try container.decodeIfPresent([RotationRule].self, forKey: .rotation) ?? []
-        self.workInterruptRecovery = try container.decodeIfPresent(InterruptRecovery.self, forKey: .workInterruptRecovery)
-            ?? container.decodeIfPresent(InterruptRecovery.self, forKey: .manualStandbyRecovery)
+        self.restMaxMinutes = (try? container.decodeIfPresent(Int.self, forKey: .restMaxMinutes)) ?? 30
+        self.idleMinutes = (try? container.decodeIfPresent(Int.self, forKey: .idleMinutes)) ?? 10
+        self.alertStyle = (try? container.decodeIfPresent(AlertStyle.self, forKey: .alertStyle)) ?? .both
+        self.rotation = (try? container.decodeIfPresent([RotationRule].self, forKey: .rotation)) ?? []
+        self.workInterruptRecovery = (try? container.decodeIfPresent(InterruptRecovery.self, forKey: .workInterruptRecovery))
+            ?? (try? container.decodeIfPresent(InterruptRecovery.self, forKey: .manualStandbyRecovery))
             ?? .resetCurrent
-        self.restInterruptRecovery = try container.decodeIfPresent(InterruptRecovery.self, forKey: .restInterruptRecovery)
-            ?? container.decodeIfPresent(InterruptRecovery.self, forKey: .passiveStandbyRecovery)
+        self.restInterruptRecovery = (try? container.decodeIfPresent(InterruptRecovery.self, forKey: .restInterruptRecovery))
+            ?? (try? container.decodeIfPresent(InterruptRecovery.self, forKey: .passiveStandbyRecovery))
             ?? .advanceNext
         
         if let decodedBlocks = try container.decodeIfPresent([FlowBlock].self, forKey: .blocks), !decodedBlocks.isEmpty {
             self.blocks = decodedBlocks
         } else {
             // 兼容旧格式数据
-            let wm = try container.decodeIfPresent(Int.self, forKey: .workMinutes) ?? 20
-            let rtm = try container.decodeIfPresent(RestTimingMode.self, forKey: .restTimingMode) ?? .stopwatch
-            let rm = try container.decodeIfPresent(Int.self, forKey: .restMinutes) ?? 5
-            let rts = try container.decodeIfPresent(Int.self, forKey: .restTargetSeconds) ?? 20
-            let sound = try container.decodeIfPresent(String.self, forKey: .soundName) ?? "Glass"
-            let msg = try container.decodeIfPresent(String.self, forKey: .message) ?? "看远方 20 秒"
+            let wm = (try? container.decodeIfPresent(Int.self, forKey: .workMinutes)) ?? 20
+            let rtm = (try? container.decodeIfPresent(RestTimingMode.self, forKey: .restTimingMode)) ?? .stopwatch
+            let rm = (try? container.decodeIfPresent(Int.self, forKey: .restMinutes)) ?? 5
+            let rts = (try? container.decodeIfPresent(Int.self, forKey: .restTargetSeconds)) ?? 20
+            let sound = (try? container.decodeIfPresent(String.self, forKey: .soundName)) ?? "Glass"
+            let msg = (try? container.decodeIfPresent(String.self, forKey: .message)) ?? "看远方 20 秒"
             
             let restBlock: FlowBlock
             if rtm == .countdown {
@@ -499,6 +501,14 @@ public struct Preset: Codable, Identifiable, Equatable {
             self.blocks = [
                 FlowBlock.makeWork(name: "工作", minutes: wm, message: msg, sound: sound),
                 restBlock
+            ]
+        }
+        
+        // 兜底保障：无论如何 blocks 不可为空
+        if self.blocks.isEmpty {
+            self.blocks = [
+                FlowBlock.makeWork(name: "专注", minutes: 20),
+                FlowBlock.makeCountdownRest(name: "休息", minutes: 5)
             ]
         }
     }

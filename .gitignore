@@ -8,6 +8,7 @@ DerivedData/
 .netrc
 *.dmg
 *.zip
+dist/
 .specify/
 specs/
 .github/skills/

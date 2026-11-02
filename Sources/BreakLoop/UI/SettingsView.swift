@@ -70,6 +70,18 @@ public struct PresetManagerView: View {
                             }
                         }
                         .tag(preset.id)
+                        .contextMenu {
+                            Button(action: {
+                                ConfigBackupManager.shared.exportSinglePresetWithSavePanel(preset)
+                            }) {
+                                Label("导出此方案...", systemImage: "square.and.arrow.up")
+                            }
+                            Button(action: {
+                                duplicatePreset(preset)
+                            }) {
+                                Label("复制方案", systemImage: "doc.on.doc")
+                            }
+                        }
                     }
                 }
                 
@@ -112,6 +124,38 @@ public struct PresetManagerView: View {
                     .help(isSelectedRunning ? "当前方案正在运行中，不可删除" : (isSelectedActiveDefault ? "当前方案已设为默认方案，不可删除" : "删除选中的方案"))
                     
                     Spacer()
+                    
+                    Menu {
+                        Button(action: {
+                            ConfigBackupManager.shared.importWithOpenPanel { result in
+                                if case .success(let importRes) = result {
+                                    if let targetId = importRes.targetPresetId {
+                                        selectedPresetId = targetId
+                                    } else if let first = presetStore.presets.first {
+                                        selectedPresetId = first.id
+                                    }
+                                }
+                            }
+                        }) {
+                            Label("导入方案或备份...", systemImage: "square.and.arrow.down")
+                        }
+                        
+                        if let selected = presetStore.presets.first(where: { $0.id == selectedPresetId }) {
+                            Button(action: {
+                                ConfigBackupManager.shared.exportSinglePresetWithSavePanel(selected)
+                            }) {
+                                Label("导出当前方案...", systemImage: "square.and.arrow.up")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .frame(width: 16, height: 16)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .help("方案导入与导出")
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
@@ -154,6 +198,14 @@ public struct PresetManagerView: View {
         )
         presetStore.addPreset(newPreset)
         selectedPresetId = newPreset.id
+    }
+    
+    private func duplicatePreset(_ preset: Preset) {
+        var copy = preset
+        copy.id = UUID()
+        copy.name = "\(preset.name) (副本)"
+        presetStore.addPreset(copy)
+        selectedPresetId = copy.id
     }
     
     private func deleteSelectedPreset() {
@@ -310,6 +362,60 @@ public struct GeneralPreferencesView: View {
                 Text("屏保与闲置保护").font(.headline)
             } footer: {
                 Text("进入屏保或长时间无操作时自动转入待机，并自动回溯扣除离开时间；暂停超时自动收起待机，防后台虚耗。")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            
+            Section {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("导出全部配置备份")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("将当前所有方案与全局偏好导出为独立 JSON 文件")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Button("导出备份...") {
+                        ConfigBackupManager.shared.exportFullBackupWithSavePanel()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("恢复或导入配置")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("从备份或方案文件还原，支持合并方案或完全覆盖")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Button("导入备份...") {
+                        ConfigBackupManager.shared.importWithOpenPanel { result in
+                            switch result {
+                            case .success(let res):
+                                let alert = NSAlert()
+                                alert.messageText = "导入成功"
+                                alert.informativeText = res.message
+                                alert.runModal()
+                            case .failure(let err):
+                                let alert = NSAlert()
+                                alert.messageText = "导入失败"
+                                alert.informativeText = err.localizedDescription
+                                alert.alertStyle = .warning
+                                alert.runModal()
+                            }
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            } header: {
+                Text("备份与数据管理").font(.headline)
+            } footer: {
+                Text("每次更新版本前系统会自动在本地创建安全快照；您也可以随时导出备份用于换机或多设备同步。")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
